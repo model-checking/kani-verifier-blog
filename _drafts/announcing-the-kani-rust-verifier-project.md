@@ -18,7 +18,7 @@ A journey with lots of stops along the way: from the familiar built-in testing c
 We imagine a wide spectrum of tools to help developers ensure that their code is secure and correct.
 This is not a new idea.
 For example, we were inspired by Alastair Reid’s [blog posts](https://alastairreid.github.io/why-not-both/) about the complementary nature of testing and automated reasoning (also known as formal verification) and the call to try to have both.
-Here's a possible subway map of exciting destinations:
+Here's a sketch of a subway map of exciting stops:
 
 ```
                                                             Prusti
@@ -253,22 +253,24 @@ mod verification {
             width: kani::any(),
             height: kani::any(),
         };
-        let factor = kani::any();
+        let factor: u8 = kani::any();       //< (*)
         kani::assume(0 != original.width);  //< explicit requirements
         kani::assume(0 != original.height); //<
         kani::assume(1 < factor);           //<
-        if let Some(larger) = original.stretch(factor) {
+        if let Some(larger) = original.stretch(factor as u64) {
             assert!(larger.can_hold(&original));
         }
     }
 }
 ```
 
-In this version, we use another automated reasoning feature: `assume`, which we use to tell the analysis to constrain the possible values of `width`, `height` and `factor`.
-With this change, the harness can be read as asking Kani: "can you find a choice of values for `width`, `height` and `factor` where `width` and `height` are any *non-zero* `u64` values and `factor` is any `u64` value *greater than one* such that we can fail the assertion?"
+In this harness, we use another automated reasoning feature: `assume`, which we use to tell the analysis to constrain the possible values of `width`, `height` and `factor`.
+We've also, unfortunately, had to change `factor` into a symbolic `u8` value due to an [issue](https://github.com/diffblue/cbmc/issues/6607) with Kani's handling of `u64` overflow.
+When this issue is fixed Kani will be able to analyze the full problem.
+Until then, this harness covers `2^136` test cases (rather than `2^192`).
+With these changes, the harness can be read as asking Kani: "can you find a choice of values for `width`, `height` and `factor` where `width` and `height` are any *non-zero* `u64` values and `factor` is any `u8` value *greater than one* such that we can fail the assertion?"
 Running this example through Kani now returns a "VERIFICATION SUCCESSFUL" result meaning the tool could not find such a choice.
 
-<!-- TODO: https://github.com/diffblue/cbmc/issues/6607 -->
 ```bash
 $ cargo kani --harness stretched_rectangle_can_hold_original_fixed
 # --snip--
@@ -281,7 +283,7 @@ So at this point of our journey, as a result of using automated reasoning techni
 
 Of course, it's equally important to state what assumptions this result relies on.
 As is the case for other automated reasoning tools, results from Kani depend on the harness accurately reflecting how the code will be used (such as the assumptions on symbolic variables `width` and `height` in the harness above) as well as the correctness of the tool implementation itself and the parts of the system that are not analyzed (such as the hardware that will run the executable).
-We will discuss these further in future posts.
+Understanding these limitations is an important aspect of using automated reasoning tools like Kani that we'll cover in future posts.
 In the meantime, if you'd like to understand more about automated reasoning then check out this [Amazon Science blog post](https://www.amazon.science/blog/a-gentle-introduction-to-automated-reasoning), which is a gentle introduction to the topic.
 
 ## Wrapping up
