@@ -24,7 +24,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   The Kani Rust Verifier (Kani) is an open-source automated reasoning
   tool that proves properties about Rust code. This is our blog for
   the project.
-baseurl: "" # the subpath of your site, e.g. /blog
+baseurl: "kani-verifier-blog/" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username:
 github_username:
