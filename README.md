@@ -1,11 +1,6 @@
-## My Project
+## Kani Verifier Blog
 
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+Blog posts for the Kani Rust Verifier
 
 ## Security
 
