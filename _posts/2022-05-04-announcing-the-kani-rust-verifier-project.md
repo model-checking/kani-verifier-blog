@@ -3,7 +3,7 @@ layout: post
 title:  "Announcing the Kani Rust Verifier Project"
 ---
 
-![Kani says hi](/assets/images/kani-logo.png)
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-logo.png" alt="Kani says hi" />
 
 Today we're excited to tell you about the [first release](https://github.com/model-checking/kani/releases) of the Kani Rust Verifier (or Kani, for short), an open source automated reasoning tool for proving properties about your Rust code.
 Like other [automated reasoning](https://www.amazon.science/blog/a-gentle-introduction-to-automated-reasoning) tools, Kani provides a way to definitively check, using mathematical techniques, whether a property of your code is true under all circumstances.
@@ -231,7 +231,7 @@ $ cargo kani --harness stretched_rectangle_can_hold_original --visualize
 ```
 
 <!-- double-wrapping means we can click to enlarge -->
-[![Counterexample trace](/assets/images/kani-rectangle-cex.png)](/assets/images/kani-rectangle-cex.png)
+<a href="{{site.baseurl | prepend: site.url}}/assets/images/kani-rectangle-cex.png"><img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-rectangle-cex.png" alt="Kani counterexample" /></a>
 
 The trace starts with the entry to the harness and ends with the failing assertion.
 In this particular trace we see that `factor` is `0` (at Step 332, which we've highlighted).
