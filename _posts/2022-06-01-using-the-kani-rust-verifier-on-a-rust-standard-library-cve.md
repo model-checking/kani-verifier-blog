@@ -254,8 +254,8 @@ However, debug asserts are only enabled in debug builds.
 ### Representation invariants
 
 In fact, these last three `debug_asserts` (that `head` and `tail` index in-bounds and that the buffer capacity is a power of two) are properties that we would like to *always hold* for any `VecDeque` instance.
-These kinds of property are known as *representation invariants*.
-Ideally we would like to know that all API methods *maintain* these properties meaning that if the method is called on an instance that satisfies the invariant then the instance still satisfies the invariant *after* the method returns.
+These kinds of properties are known as *representation invariants*.
+Ideally we would like to know that all API methods *maintain* these properties, meaning that if the method is called on an instance that satisfies the invariant, then the instance still satisfies the invariant *after* the method returns.
 [One subtlety is that a representation invariant may be temporarily broken within a method as long as it is fixed by the return of the call.]
 We will return to this idea when we use Kani!
 
@@ -316,7 +316,7 @@ Note that this doesn't mean that finding the issue is straightforward!
 The underlying problem is that `reserve` uses both the buffer capacity and the usable capacity to test whether a resize is necessary.
 This should be changed to use one or the other.
 In this case, the [fix](https://github.com/sfackler/rust/commit/9733463d2b141a166bfa2f55ec316066ab0f71b6) is to use the buffer capacity, uniformly.
-For our running example, this means the branch is not-taken, as expected.
+For our running example, this means the branch is not taken, as expected.
 
 ```rust
 pub fn reserve(&mut self, additional: usize) {
@@ -336,7 +336,7 @@ pub fn reserve(&mut self, additional: usize) {
 }
 ```
 
-With this change our running example no longer has a memory safety issue.
+With this change, our running example no longer has a memory safety issue.
 This is good!
 But even better, would be a way we could know that the memory safety issue is removed for all possible uses of `reserve`.
 This is trickier because `VecDeque` is parametric (there are many types that we can instantiate for `T`) and, moreover, we have to consider all possible buffer capacities.
@@ -433,7 +433,7 @@ pub fn symbolic_example_with_cve_fixed {
 
 Unfortunately, using this harness currently results in Kani timing out (no answer after 10 minutes).
 Under the hood, Kani uses techniques based on logic and automated reasoning solvers, known as SAT solvers.
-Although SAT solvers are increasingly powerful the "satisfiability" problem that these solvers address is fundamentally hard (an [NP-complete problem](https://en.wikipedia.org/wiki/NP-completeness)) so timeouts are sometimes an unavoidable reality.
+Although SAT solvers are increasingly powerful, the "satisfiability" problem that these solvers address is fundamentally hard (an [NP-complete problem](https://en.wikipedia.org/wiki/NP-completeness)) so timeouts are sometimes an unavoidable reality.
 If you'd like to understand more about this problem then check out this [Amazon Science blog post](https://www.amazon.science/blog/a-gentle-introduction-to-automated-reasoning), which is a gentle introduction to automated reasoning.
 
 ### Going further
@@ -452,11 +452,11 @@ This is a general observation for collections like sets, vectors or queues becau
 Because of this, we can use a second idea to *abstract* the `VecDeque` in the following way.
 We will throw away the contents of the vector!
 All we will keep is the length of the underlying vector.
-Anytime we enqueue an item we will apply the appropriate updates to the metadata (such as the `head` and `tail`) but we will effectively "throwaway" the value.
-Anytime we pop an item we will return a symbolic value.
+Anytime we enqueue an item we will apply the appropriate updates to the metadata (such as the `head` and `tail`) but we will effectively "throw away" the value.
+Anytime we pop an item, we will return a symbolic value.
 This is, of course, not a sensible implementation that you would want to use in a program (who wants a queue that you enqueue `5` and returns `42`?) but it *is* useful for verification purposes.
 The idea is that our abstract version of a `VecDeque` *over-approximates* a real `VecDeque`.
-This means that if we can prove a result with our abstract queue then the result also holds for the real implementation.
+This means that if we can prove a result with our abstract queue, then the result also holds for the real implementation.
 Here's what our verification-only `AbstractVecDeque` looks like:
 
 ```rust
