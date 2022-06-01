@@ -411,7 +411,7 @@ VERIFICATION:- SUCCESSFUL
 
 ### Bounded results
 
-In [our announcement post]({% post_url 2022-05-04-announcing-the-kani-rust-verifier-project %}#enter-kani) we introduced Kani [`any<T>()`](https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html).
+In [our announcement post]({{site.baseurl}}{% post_url 2022-05-04-announcing-the-kani-rust-verifier-project %}#enter-kani) we introduced Kani [`any<T>()`](https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html).
 This is a feature that informally generates "any `T` value".
 This is not the same as a randomly chosen concrete value (as in fuzzing) but rather a *symbolic* value that represents any possible value of the appropriate type.
 The key idea is that we can use `any` in a Kani harness to verify the behavior of our code with respect to all possible values of an input (rather than having to exhaustively enumerate them).
