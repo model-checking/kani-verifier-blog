@@ -5,11 +5,11 @@ title:  "Using the Kani Rust Verifier on a Rust Standard Library CVE"
 
 In this post we'll apply the [Kani Rust Verifier](https://github.com/model-checking/kani) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from the [Rust Standard Library](https://doc.rust-lang.org/std/).
 We will look at a [CVE (Common Vulnerability and Exposure) from 2018](https://cve.mitre.org/cgi-bin/cvename.cgi?name=%20CVE-2018-1000657).
-First we will show how Kani can find the issue and secondly we discuss ways to be assured that the fix appropriately addresses the problem.
+First, we will show how Kani can find the issue, and secondly, we discuss ways to be assured that the fix appropriately addresses the problem.
 
-At its heart this CVE is a memory safety issue in the implementation for `VecDeque`: a double-ended queue implemented as a dynamically resizable ring buffer.
-Using the `VecDeque` API in a specific way used to be able to cause out-of-bounds memory accesses.
-The [original issue](https://github.com/rust-lang/rust/issues/44800) gives a good write-up and there is another great explanation  by [Yechan Bae](https://gts3.org/2019/cve-2018-1000657.html) who gives a proof-of-concept to reproduce the issue.
+At its heart, this CVE is a memory safety issue in the implementation for `VecDeque`: a double-ended queue implemented as a dynamically resizable ring buffer.
+It was possible to use the `VecDeque` API in a specific way and cause out-of-bounds memory accesses.
+The [original issue](https://github.com/rust-lang/rust/issues/44800) gives a good write-up, and there is another great explanation by [Yechan Bae](https://gts3.org/2019/cve-2018-1000657.html) who gives a proof-of-concept to reproduce the issue.
 To keep this post self-contained, we'll also explain the issue before diving into using Kani.
 If you're familiar with CVE-2018-1000657 then feel free to skip ahead!
 
@@ -55,19 +55,19 @@ fn main() {
 # --snip--
 ```
 
-The program creates a new `VecDeque` and then calls `3` API functions: `push_front` and `reserve` and `push_back`.
-The error is unexpected: none of these operations should cause an out-of-bounds access detected by valgrind, which warns of an "invalid write".
+The program creates a new `VecDeque` and then calls 3 API functions: `push_front`, `reserve`, and `push_back`.
+The error is unexpected: none of these operations should cause the out-of-bounds access detected by valgrind, which warns of an "invalid write".
 [You may be wondering about the use of the `System` allocator---this is *not* necessary to trigger the memory issue but *is* needed to enable `valgrind` to detect the issue.]
 What's going on inside these calls?
 Let's dive into the implementation of `VecDeque`.
 
 ## Background: `VecDeque`
 
-Let's start with the "shape" of a `VecDeque<T,A>`.
+Let's start with the "shape" of a `VecDeque<T, A>`.
 The type parameter `T` is the type of element that can be queued.
-In this post, we will ignore zero-sized types (ZSTs) which are special-cased in the implementation.
+In this post, we will ignore [zero-sized types (ZSTs)](https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts) which are special-cased in the implementation.
 `A` is the allocator responsible for heap allocations and can be swapped out if needed, such as on embedded systems.
-By default this uses the global allocator.
+By default, this uses the global allocator.
 Internally, a queue is a buffer `buf` (a dynamically resizable vector) with a `tail` and `head`, which are used to index into `buf`.
 
 ```rust
@@ -207,7 +207,7 @@ The problematic line is `new_cap > self.capacity()`.
   Since no resize is necessary this is `8`.
   - However `self.capacity()` is the *usable capacity* of the queue, which is `7`.
 
-Because of this mismatch the branch is taken.
+Because of this mismatch, the branch is taken.
 We will not dive into the code for `self.buf.reserve_exact()`, but importantly, it is a no-op.
 The buffer does not grow and remains at capacity `8`.
 
