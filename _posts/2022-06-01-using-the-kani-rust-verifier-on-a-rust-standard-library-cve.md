@@ -358,7 +358,7 @@ Kani itself relies on a recent version of the Rust compiler (to parse Rust progr
 So to get around this, we extracted two versions of the `VecDeque` implementation into a standalone crate.
 The versions are identical except that we apply a single-line patch to simulate the original problem in one.
 In this way, we can link proof harnesses against a version of `VecDeque` with and without the CVE.
-All the code for this post is available in Kani's test directory with instructions on reproducing the results.
+All the code for this post is available in [Kani's test directory](https://github.com/model-checking/kani/tree/main/tests/cargo-kani/vecdeque-cve) with instructions on reproducing the results.
 
 ### Finding the issue
 
