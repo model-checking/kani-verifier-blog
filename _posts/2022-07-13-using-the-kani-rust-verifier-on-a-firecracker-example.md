@@ -1,4 +1,7 @@
-# Kani x Firecracker: Using the Kani Rust Verifier on a Firecracker Example
+---
+layout: post
+title:  "Using the Kani Rust Verifier on a Firecracker Example"
+---
 
 In this post we'll apply the [Kani Rust Verifier](https://github.com/model-checking/kani) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Firecracker](https://firecracker-microvm.github.io/), an open source virtualization project for serverless applications.
 We will use Kani to get a strong guarantee that Firecracker's block device is correct with respect to a simple virtio property when parsing guest requests, which may be invalid or malicious.
