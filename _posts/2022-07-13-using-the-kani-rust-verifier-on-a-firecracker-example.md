@@ -1,7 +1,5 @@
 # Kani x Firecracker: Using the Kani Rust Verifier on a Firecracker Example
 
-<!-- figure idea: Kani x Firecracker logo -->
-
 In this post we'll apply the [Kani Rust Verifier](https://github.com/model-checking/kani) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Firecracker](https://firecracker-microvm.github.io/), an open source virtualization project for serverless applications.
 We will use Kani to get a strong guarantee that Firecracker's block device is correct with respect to a simple virtio property when parsing guest requests, which may be invalid or malicious.
 In this way, we show how Kani can complement Firecracker's defense in depth investments, such as fuzzing.
@@ -62,9 +60,6 @@ struct Descriptor {
     next: u16,
 }
 ```
-<!--
-https://github.com/firecracker-microvm/firecracker/blob/3e217c19abaea275138ac13a4be0f85b834ec246/src/devices/src/virtio/queue.rs#L51
--->
 
 The `addr` and `len` fields give the address and length of a buffer.
 The `flags` field indicates whether the buffer is read-only or write-only from the point of view of the device (a buffer cannot be both readable and writable).
@@ -194,9 +189,6 @@ impl Request {
     }
 }
 ```
-<!--
-https://github.com/firecracker-microvm/firecracker/blob/3e217c19abaea275138ac13a4be0f85b834ec246/src/devices/src/virtio/block/request.rs#L214
--->
 ---
 
 ## A property of interest
@@ -228,7 +220,6 @@ if !checker.virtio_2642_holds() {
     assert result.is_err();
 }
 ```
-<!-- should we have kani::implies(b1, b2)? -->
 
 Here's one way to implement the checker.
 The idea is to use a finite-state machine that moves when we see a new permission.
