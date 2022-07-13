@@ -304,8 +304,7 @@ Our example is available in Kani's test directory with instructions on reproduci
 
 ### Using `kani::any::<T>()` to mock guest memory
 
-<!--- TODO: link earlier posts -->
-In earlier posts we introduced Kani [`any<T>()`](https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html).
+In earlier posts ([here](https://model-checking.github.io/kani-verifier-blog/2022/05/04/announcing-the-kani-rust-verifier-project.html#enter-kani) and [here](https://model-checking.github.io/kani-verifier-blog/2022/06/01/using-the-kani-rust-verifier-on-a-rust-standard-library-cve.html#bounded-results)) we introduced Kani [`any<T>()`](https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html).
 This is a feature that informally generates "any `T` value".
 This is not the same as a randomly chosen concrete value (as in fuzzing) but rather a *symbolic* value that represents any possible value of the appropriate type.
 The key idea is that we can use `any` in a Kani harness to verify the behavior of our code with respect to all possible values of an input (rather than having to exhaustively enumerate them).
