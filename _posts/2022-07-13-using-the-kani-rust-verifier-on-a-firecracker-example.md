@@ -228,26 +228,7 @@ When we see a write-only descriptor we move to a new state `OnlyWriteOk` where o
 If we see a read-only descriptor in this new state then we have invalidated the requirement.
 Implementing `virtio_2642_holds` is as simple as testing whether the state is not `Invalid`.
 
-```
-                         ┌─────┐
-                         V     │ ReadOnly
-   Init    ┌───────────────┐   │
- ────────> │ ReadOrWriteOk │ ──┘
-           └───────────────┘
-                  │
-                  │ WriteOnly
-                  │      ┌─────┐
-                  V      V     │ WriteOnly
-           ┌───────────────┐   │
-           │ OnlyWriteOk   │ ──┘
-           └───────────────┘
-                  │
-                  │ ReadOnly
-                  V
-           ┌───────────────┐
-           │ Invalid       │
-           └───────────────┘
-```
+<img src="{{site.baseurl | prepend: site.url}}/assets/diagrams/checker-fsm.jpg"/>
 
 ```rust
 #[derive(std::cmp::PartialEq, Clone, Copy)]
