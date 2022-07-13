@@ -21,12 +21,12 @@ Firecracker's [design doc](https://github.com/firecracker-microvm/firecracker/bl
 
 In this post, we will focus on the requirements for security and isolation for Firecracker's device emulation code.
 The central difficulty is that devices must be exposed by Firecracker to a guest (in order for the guest to do useful work) but Firecracker cannot trust the guest to be well-behaved.
-Firecracker's [design doc](https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md#threat-containment) says: "from a security perspective, all vCPU threads [running the guest] are considered to be running malicious code as soon as they have been started; these malicious threads need to be contained".
+Firecracker's [design doc](https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md#threat-containment) says: _"from a security perspective, all vCPU threads [running the guest] are considered to be running malicious code as soon as they have been started; these malicious threads need to be contained"_.
 This is important because bugs in code responsible for containment, such as device emulation, are potential security issues.
-For example, a buffer overflow bug in Firecracker's vsock device was the root cause of a [CVE](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-18960) that could "be used by a malicious guest to read from and write to a segment of the host-side Firecracker process' heap address space" ([source](https://github.com/firecracker-microvm/firecracker/issues/1462)).
+For example, a buffer overflow bug in Firecracker's vsock device was the root cause of a [CVE](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-18960) that could _"be used by a malicious guest to read from and write to a segment of the host-side Firecracker process' heap address space"_ ([source](https://github.com/firecracker-microvm/firecracker/issues/1462)).
 
 One of the select number of devices exposed by Firecracker to the microVM is a block device.
-[A block device, such as a disk, is a device that allows random access of data in fixed-size blocks.]
+(A block device, such as a disk, is a device that allows random access of data in fixed-size blocks.)
 In Firecracker, the block device is a piece of code that *emulates* a physical block device from the perspective of the guest but in reality is a disk image that is specified by the user when setting up the microVM.[^footnote-api]
 At a high-level, the guest (running on an untrusted vCPU thread) sends read and write requests that must be handled by the device (running on the trusted VMM thread).
 Informally, a property that we would like high assurance for is that the Firecracker block device behaves as we expect *regardless* of the request, which is to say, regardless of any untrusted guest behavior.
