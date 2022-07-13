@@ -11,7 +11,7 @@ Firecracker is a Virtual Machine Monitor (VMM) for lightweight virtual machines 
 A virtual machine is an abstract compute environment (i.e., a set of resources such as processors, memory and I/O) that is complete enough to run an operating system (also called a guest in this context).
 A Virtual Machine Monitor (VMM) is a specialized systems component responsible for managing and running virtual machines (in an analogous way to how an operating system would manage and run processes).[^footnote-terminology]
 
-Firecracker was designed to meet the requirements of serverless and container applications, such as AWS Lambda and AWS Fargate.
+Firecracker was designed to meet the requirements of serverless and container applications, such as [AWS Lambda](https://aws.amazon.com/lambda/) and [AWS Fargate](https://aws.amazon.com/fargate/).
 In these applications, the requirements are that multiple customer workloads run on the same hardware with minimal overhead (for efficiency and performance) whilst preserving strong security and isolation.
 
 For a deep dive into the design and implementation of Firecracker, see this [NSDI 2020 paper](https://www.usenix.org/conference/nsdi20/presentation/agache).
@@ -27,7 +27,7 @@ For example, a buffer overflow bug in Firecracker's vsock device was the root ca
 
 One of the select number of devices exposed by Firecracker to the microVM is a block device.
 (A block device, such as a disk, is a device that allows random access of data in fixed-size blocks.)
-In Firecracker, the block device is a piece of code that *emulates* a physical block device from the perspective of the guest but in reality is a disk image that is specified by the user when setting up the microVM.[^footnote-api]
+In Firecracker, the block device is a piece of code that *emulates* a physical block device from the perspective of the guest, but in reality is a disk image that is specified by the user when setting up the microVM.[^footnote-api]
 At a high-level, the guest (running on an untrusted vCPU thread) sends read and write requests that must be handled by the device (running on the trusted VMM thread).
 Informally, a property that we would like high assurance for is that the Firecracker block device behaves as we expect *regardless* of the request, which is to say, regardless of any untrusted guest behavior.
 In the next sections we'll get into more detail about how requests work, what we mean by "behaves as we expect" more precisely, and show how we can use Kani to get this assurance.
@@ -75,7 +75,7 @@ However, the Firecracker block device expects that read requests use a descripto
   - The second describes a write-only buffer for the device to fill with the contents of the requested sector. The length of this buffer is the requested size.
   - The third describes a write-only buffer for the device to fill with a status byte indicating whether the request succeeded.
 
-A write request is similar except that the first buffer specifies a write request type (`VIRTIO_BLK_T_OUT`) and the second descriptor describes a read-only buffer for the device that contains the data to be written-to the requested sector.
+A write request is similar except that the first buffer specifies a write request type (`VIRTIO_BLK_T_OUT`) and the second descriptor describes a read-only buffer for the device that contains the data to be written to the requested sector.
 
 The following figure shows a descriptor table with descriptors and buffers for a read request of sector `5` of `2048` bytes.
 The descriptor chain begins at index `7` and continues through `12` and `20` and the descriptors point-to buffers at addresses `A`, `B` and `C`, respectively.
@@ -220,7 +220,7 @@ if result.is_ok() {
     assert!(checker.virtio_2642_holds())
 }
 if !checker.virtio_2642_holds() {
-    assert result.is_err();
+    assert!(result.is_err());
 }
 ```
 
@@ -286,7 +286,7 @@ The key idea is that we can use `any` in a Kani harness to verify the behavior o
 
 In previous posts, we've mostly used `any` in proof harnesses (the entry point for analysis analogous to a test in unit testing).
 We'll go a bit further here.
-When we look at the `parse` method a good place to think about using `any` is the guest memory `mem`.
+When we look at the `parse` method, a good place to think about using `any` is the guest memory `mem`.
 This is because Firecracker cannot make assumptions about the values returned from reading, which is a good match for symbolic values.
 By writing a verification-version mock of `GuestMemoryMmap` we will be able to verify the behavior of `parse` with respect to any data returned by reading guest memory.
 Of course, it is important to say that this means we will *not* be verifying the implementation of `GuestMemoryMmap` itself.
@@ -342,9 +342,9 @@ impl ReadObjChecks<Descriptor> for Descriptor {
 
 ### Proof harness
 
-Putting this altogether, we can write a harness as follows.
+Putting this all together, we can write a harness as follows.
 At a high-level, we generate symbolic inputs for the `parse` and then assert our property of interest.
-The only nit is that we must generate an initial valid `DescriptorChain` (not all `kani::any<DescriptorChain>()` values are valid).
+The only nit is that we must generate an initial valid `DescriptorChain` (not all `kani::any::<DescriptorChain>()` values are valid).
 The way we chose to do this is to call `DescriptorChain::checked_new` with symbolic inputs and proceed if this returns a valid `DescriptorChain`.
 
 ```rust
@@ -352,7 +352,6 @@ The way we chose to do this is to call `DescriptorChain::checked_new` with symbo
 mod verification {
     use super::*;
 
-    // ANCHOR: stretch_kani
     #[kani::proof]
     pub fn requirement_2642() {
         let mem = GuestMemoryMmap::new();
@@ -377,7 +376,7 @@ mod verification {
 ```
 
 Passing the harness to Kani results in `VERIFICATION:- SUCCESSFUL` in a few seconds.
-As sanity check, if we insert an issue such as forgetting a validity check to ensure the third buffer is read-only then Kani reports an error (since in this case it is possible to fail virtio requirement 2.6.4.2 but return a valid `Request`).
+As sanity check, if we insert an issue such as forgetting a validity check to ensure the third buffer is read-only, then Kani reports an error (since in this case it is possible to fail virtio requirement 2.6.4.2 but return a valid `Request`).
 Our example is available in Kani's test directory with instructions on reproducing these results.
 
 But what does this result mean?
@@ -393,7 +392,7 @@ Kani allows us to definitively check a property of interest (if virtio requireme
 
 In this post, we introduced Firecracker and focused our attention on its virtio block device implementation.
 We encoded a finite-state machine to check a simple virtio property.
-Using Kani's verification features, in particular, `kani::any::<T>()` we built a mock guest memory that uses symbolic values to model reads (of any value).
+Using Kani's verification features, in particular, `kani::any::<T>()`, we built a mock guest memory that uses symbolic values to model reads (of any value).
 Finally, we brought this all together into a proof harness that Kani can analyze in seconds even though writing all the possible test cases would be prohibitively expensive.
 
 To test drive Kani yourself, check out our [“getting started” guide](https://model-checking.github.io/kani/getting-started.html).
