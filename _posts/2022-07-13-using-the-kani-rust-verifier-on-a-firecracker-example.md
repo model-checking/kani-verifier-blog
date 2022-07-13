@@ -2,7 +2,7 @@
 
 <!-- figure idea: Kani x Firecracker logo -->
 
-In this post we'll apply the [Kani Rust Verifier](https://kani-verifier.github.io) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Firecracker](https://firecracker-microvm.github.io/), an open source virtualization project for serverless applications.
+In this post we'll apply the [Kani Rust Verifier](https://github.com/model-checking/kani) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Firecracker](https://firecracker-microvm.github.io/), an open source virtualization project for serverless applications.
 We will use Kani to get a strong guarantee that Firecracker's block device is correct with respect to a simple virtio property when parsing guest requests, which may be invalid or malicious.
 In this way, we show how Kani can complement Firecracker's defense in depth investments, such as fuzzing.
 
@@ -208,7 +208,7 @@ Let's start with a simple one from the virtio specification.
 >
 > The driver MUST place any device-writable descriptor elements after any device-readable descriptor elements.
 >
-> Source: https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-280004
+> Source: <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-280004>
 
 This is a requirement on the driver under the control of the guest.
 However, Firecracker cannot trust that this is the case: the requirement has to be validated.
@@ -300,7 +300,7 @@ impl DescriptorPermissionChecker {
 This example has a number of simplifications.
 In particular, we took the block implementation from Firecracker v1.0 and pulled it into a set of independent files so that we could focus on the verification rather than how Kani integrates into a large project.
 Anywhere that we've simplified we've marked it with a comment `Kani change`.
-Our example is available in Kani's test directory with instructions on reproducing the results of this post.[^footnote-example]
+Our example is available in Kani's test directory with instructions on reproducing the results of this post (see [Further Reading](#further-reading)).
 
 ### Using `kani::any::<T>()` to mock guest memory
 
@@ -401,7 +401,7 @@ mod verification {
 }
 ```
 
-Passing the harness to Kani results in `VERIFICATION SUCCESSFUL` in a few seconds.
+Passing the harness to Kani results in `VERIFICATION:- SUCCESSFUL` in a few seconds.
 As sanity check, if we insert an issue such as forgetting a validity check to ensure the third buffer is read-only then Kani reports an error (since in this case it is possible to fail virtio requirement 2.6.4.2 but return a valid `Request`).
 Our example is available in Kani's test directory with instructions on reproducing these results.
 
@@ -428,10 +428,10 @@ Look out for a follow up post where we'll use Kani on an example from [Tokio](ht
 
 ## Further Reading
 
-  - Firecracker: https://firecracker-microvm.github.io/
-  - Firecracker NSDI 2020 paper: https://www.usenix.org/conference/nsdi20/presentation/agache
-  - Firecracker's design doc: https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md
-  - [Code and instructions for reproducing the results in this post](TODO)
+  - Firecracker: <https://firecracker-microvm.github.io/>
+  - Firecracker NSDI 2020 paper: <https://www.usenix.org/conference/nsdi20/presentation/agache>
+  - Firecracker's design doc: <https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md>
+  - [Code and instructions for reproducing the results in this post](https://github.com/model-checking/kani/tree/main/tests/cargo-kani/firecracker-block-example)
 
 ## Footnotes
 
@@ -443,10 +443,8 @@ Look out for a follow up post where we'll use Kani on an example from [Tokio](ht
 
 [^footnote-virtio]: For more about virtio see the [specification](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html).
 
-[^footnote-process]: We will be exploring the implementation code in [src/devices/src/virtio](https://github.com/firecracker-microvm/firecracker/tree/main/src/devices/src/virtio). Processing of requests for the block device begins [here](https://github.com/firecracker-microvm/firecracker/blob/705370c4007b0c95cca6f7435d1f81a0cd125c2a/src/devices/src/virtio/block/device.rs#L332). 
+[^footnote-process]: We will be exploring the implementation code in [`src/devices/src/virtio`](https://github.com/firecracker-microvm/firecracker/tree/main/src/devices/src/virtio). Processing of requests for the block device begins [here](https://github.com/firecracker-microvm/firecracker/blob/705370c4007b0c95cca6f7435d1f81a0cd125c2a/src/devices/src/virtio/block/device.rs#L332).
 
-[^footnote-descriptorchain]: See https://github.com/firecracker-microvm/firecracker/blob/3e217c19abaea275138ac13a4be0f85b834ec246/src/devices/src/virtio/queue.rs#L64
+[^footnote-descriptorchain]: See <https://github.com/firecracker-microvm/firecracker/blob/3e217c19abaea275138ac13a4be0f85b834ec246/src/devices/src/virtio/queue.rs#L64>
 
 [^footnote-mmap]: As a KVM-based VMM, Firecracker can allocate guest memory using `malloc` or `mmap` and have it be mapped into the physical address space of the guest.
-
-[^footnote-example]: TODO: LINK TO EXAMPLE IN KANI REGRESSION
