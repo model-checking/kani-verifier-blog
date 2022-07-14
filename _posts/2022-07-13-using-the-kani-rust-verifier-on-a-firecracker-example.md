@@ -385,7 +385,7 @@ Ignoring error cases, which are also covered, our harness using our mock guest m
 These are each 16-byte values.
 The `parse` function also reads the first buffer to determine the request type and sector.
 This is a 16-byte value.
-In this case that's `2^16 * 2^16 * 2^16 * 2^16 = 2^64` test cases.
+In this case that's `(2^8)^16 * (2^8)^16 * (2^8)^16 * (2^8)^16 = 2^512` test cases.
 Kani allows us to definitively check a property of interest (if virtio requirement 2.6.4.2 does not hold then `parse` will fail) across all of these cases.
 
 ## Summary
