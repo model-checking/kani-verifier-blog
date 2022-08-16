@@ -283,7 +283,7 @@ fn is_valid_kind_arc(&self) -> bool {
 
 This gives us an idea!
 What if we could keep track of the original vector for `KIND_VEC` too?
-The use of program state that is just for verification is called [*ghost state*](http://whiley.org/2014/06/20/understanding-ghost-variables-in-software-verification/).
+The use of program state that is just for verification is known as *ghost state*, originally called [auxiliary variables](https://dl.acm.org/doi/pdf/10.1145/360051.360224).
 You can think of it as metadata only for the purposes of Kani that can be ignored by compilation (and hence has no runtime cost).
 Here's what we need:
 
@@ -503,7 +503,7 @@ We have a one-step install process and examples, including all the code in this 
 
   - [Tokio project](https://tokio.rs/)
   - [Tokio bytes](https://github.com/tokio-rs/bytes)
-  - [More on ghost state](http://whiley.org/2014/06/20/understanding-ghost-variables-in-software-verification/)
+  - [More on auxiliary variables](https://dl.acm.org/doi/pdf/10.1145/360051.360224)
   - [More on representation invariants (lecture 8)](https://ocw.mit.edu/courses/6-170-laboratory-in-software-engineering-fall-2005/pages/lecture-notes/)
   - [Code and instructions for reproducing the results in this post](https://github.com/nchong-at-aws/bytes/blob/kani-bytes-mut/README-KANI.md)
 
