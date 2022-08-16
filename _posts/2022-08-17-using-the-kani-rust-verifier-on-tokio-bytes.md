@@ -3,10 +3,10 @@ layout: post
 title:  "Using the Kani Rust Verifier on Tokio Bytes"
 ---
 
-In this post we'll apply the Kani Rust Verifier (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Tokio](https://tokio.rs/).
+In this post we'll apply the [Kani Rust Verifier](https://github.com/model-checking/kani) (or Kani for short), our open-source formal verification tool that can prove properties about Rust code, to an example from [Tokio](https://tokio.rs/).
 
 Tokio is an [*asynchronous runtime*](https://tokio.rs/tokio/tutorial) for Rust programs, meaning that it abstracts the low-level async capabilities of the language into useful building blocks (such as providing an executor for the scheduling and execution of async tasks).
-The aim of Tokio is to provide the "building blocks needed for writing network applications [with] the flexibility to target a wide range of systems, from large servers with dozens fo cores to small embedded devices".
+The aim of Tokio is to provide the _"building blocks needed for writing network applications [with] the flexibility to target a wide range of systems, from large servers with dozens of cores to small embedded devices"_.
 In this post we will focus on a low-level component of the Tokio stack and proving properties about a core data structure.
 
   - [Diving into `Bytes::BytesMut`](#diving-into-bytesbytesmut)
@@ -20,7 +20,7 @@ In this post we will focus on a low-level component of the Tokio stack and provi
 
 ## Diving into `Bytes::BytesMut`
 
-At the bottom of the Tokio stack is the [Bytes](https://github.com/tokio-rs/bytes) library, a "rich set of utilities for manipulating byte arrays", which reflects the fact that networking applications, at their core, have to manipulate byte streams.
+At the bottom of the Tokio stack is the [Bytes](https://github.com/tokio-rs/bytes) library, a _"rich set of utilities for manipulating byte arrays"_, which reflects the fact that networking applications, at their core, have to manipulate byte streams.
 Inside the library are two container types:
 - `Bytes`: a cheaply cloneable and sliceable chunk of contiguous memory
 - `BytesMut`: a unique reference to a (potentially shared) contiguous slice of memory
@@ -45,7 +45,7 @@ struct Shared {
 ```
 
 The straightforward part is the first three fields.
-Similar to a `Vec<u8>`, we have a pointer `ptr` to the backing buffer of size `cap` bytes with `len` bytes currently in-use.
+Similar to a `Vec<u8>`, we have a pointer `ptr` to the backing buffer of size `cap` bytes with `len` bytes currently in use.
 The field `data` is a bit trickier because it handles sharing of the backing buffer.
 In particular, `data` is used to distinguish between two kinds of representation: `KIND_VEC` and `KIND_ARC`.
 - A `KIND_VEC` is used when the backing buffer is only pointed to by `ptr`.
@@ -53,7 +53,7 @@ In this case, `data` is not used as a pointer but instead contains a sentinel va
 - A `KIND_ARC` is used when the backing buffer is shared by multiple `BytesMut` instances.
 In this case, each instance's `data` field points to a single `Shared` object whose `ref_count` keeps track of the number of aliases.
 In order for this aliasing to be safe, the implementation must ensure that each instance `ptr` field points to a disjoint part of the slice.
-[Additionally, the rules for [pointer alignment](https://doc.rust-lang.org/reference/type-layout.html#pointers-and-references-layout) ensure that we will never mixup representations (since the bottom bit of a pointer will always be `0`).]
+[Additionally, the rules for [pointer alignment](https://doc.rust-lang.org/reference/type-layout.html#pointers-and-references-layout) ensure that we will never mix up representations (since the bottom bit of a pointer will always be `0`).]
 
 As a user of `BytesMut` you don't need to worry about this distinction.
 Under the hood, the implementation will switch representations as required [and, within the library implementation, we can use the private method `kind()` to query the representation of a given instance].
@@ -76,8 +76,8 @@ Constructors such as `new()` (and others like `with_capacity()` and `zeroed()`) 
 By construction these are `KIND_VEC` since there is exactly one instance that points to the backing buffer: the one we are creating.
 
 Operations like `split_off(&mut self, at: usize) -> BytesMut` (and others like `split()` and `split_to()`) allow us to split the bytes into two.
-In the case of `split_off` we split at the index `at` so that afterwards `self` contains elements `[0,at)` and the returned `BytesMut` contains elements `[at, cap)`.
-Internally this means that after the call both `self` and the returned `BytesMut` must be `KIND_ARC`.
+In the case of `split_off`, we split at the index `at` so that afterwards `self` contains elements `[0,at)` and the returned `BytesMut` contains elements `[at, cap)`.
+Internally this means that, after the call, both `self` and the returned `BytesMut` must be `KIND_ARC`.
 For example:
 
 ```rust
@@ -113,7 +113,7 @@ Notice that after the `split_off` operation, both `a` and `b` share the same bac
 
 Finally, it is possible for the representation to return from `KIND_ARC` back to `KIND_VEC` using `reserve(&mut self, additional:usize)`, which ensures that there is capacity for at least `additional` more bytes to be inserted.
 If `self` does not have sufficient space then a fresh backing buffer is allocated and the contents of the original are copied over.
-Continuing our example above:
+Continuing from our example above:
 
 ```rust
 b.reserve(3);
@@ -136,9 +136,9 @@ After the `reserve` operation, the `ref_count` is `1` since only `a` has element
 
 ## Using Kani
 
-To show how Tokio developers could integrate Kani proofs we will add our examples to (a fork of) the `BytesMut` implementation.
+To show how Tokio developers could integrate Kani proofs, we will add our examples to (a fork of) the `BytesMut` implementation.
 This has the advantage that the implementation details will be visible to our proofs.
-Like previous posts, all the code and instructions for reproducing the results of this post yourself are available.
+Like previous posts, all the code and instructions for reproducing the results of this post yourself are available (see [Further Reading](#further-reading)).
 
 ### A simple example
 
@@ -327,9 +327,6 @@ Here we are fortunate that `BytesMut` only has one "root constructor" so we only
 With this in hand, we can re-write our well-formedness check for `KIND_VEC`.
 Notice that we allow `ptr` and `cap` so long as they are in bounds (rather than being an exact match).
 This is because there are `BytesMut` operations, such as [`advance`](https://docs.rs/bytes/latest/bytes/buf/trait.Buf.html#tymethod.advance), that modify these fields.
-<!--
-[**Q for Kani devs: technically ghost state should not be able to be assigned to "real" state---we don't enforce that. And additionally what is `sizeof(BytesMut)` now? It shouldn't count the ghost state.**]
--->
 
 ```rust
 fn is_valid_kind_vec(&self) -> bool {
