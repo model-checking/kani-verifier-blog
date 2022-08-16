@@ -236,10 +236,10 @@ However, we no longer have access to this `vec`, so for now we will make our wel
 [Don't worry, we will return to this later!]
 
 ```rust
-    fn is_valid_kind_vec(&self) -> bool {
-        assert!(self.kind() == KIND_VEC);
-        true
-    }
+fn is_valid_kind_vec(&self) -> bool {
+    assert!(self.kind() == KIND_VEC);
+    true
+}
 ```
 
 Let's now turn to the `KIND_ARC` case.
@@ -262,23 +262,23 @@ Having this "in our hands" is useful because it must be the case that the `ptr` 
 Putting this together:
 
 ```rust
-    fn is_valid_kind_arc(&self) -> bool {
-        assert!(self.kind() == KIND_ARC);
-        let shared: *mut Shared = self.data as _;
-        unsafe {
-            let ref_count = (*shared).ref_count.load(Ordering::Relaxed);
-            let valid_ref_count = 1 <= ref_count;
+fn is_valid_kind_arc(&self) -> bool {
+    assert!(self.kind() == KIND_ARC);
+    let shared: *mut Shared = self.data as _;
+    unsafe {
+        let ref_count = (*shared).ref_count.load(Ordering::Relaxed);
+        let valid_ref_count = 1 <= ref_count;
 
-            let vec_ptr = (*shared).vec.as_mut_ptr();
-            let vec_cap = (*shared).vec.capacity();
-            let vec_end_ptr = vec_ptr.offset(vec_cap as isize);
-            let ptr = self.ptr.as_ptr();
-            let ptr_in_bounds = vec_ptr <= ptr && ptr <= vec_end_ptr;
-            let cap_in_bounds = self.cap <= vec_cap;
+        let vec_ptr = (*shared).vec.as_mut_ptr();
+        let vec_cap = (*shared).vec.capacity();
+        let vec_end_ptr = vec_ptr.offset(vec_cap as isize);
+        let ptr = self.ptr.as_ptr();
+        let ptr_in_bounds = vec_ptr <= ptr && ptr <= vec_end_ptr;
+        let cap_in_bounds = self.cap <= vec_cap;
 
-            valid_ref_count && ptr_in_bounds && cap_in_bounds
-        }
+        valid_ref_count && ptr_in_bounds && cap_in_bounds
     }
+}
 ```
 
 This gives us an idea!
@@ -332,17 +332,17 @@ This is because there are `BytesMut` operations, such as [`advance`](https://doc
 -->
 
 ```rust
-    fn is_valid_kind_vec(&self) -> bool {
-        assert!(self.kind() == KIND_VEC);
-        let vec_ptr = self.ghost.original_vec_ptr.as_ptr();
-        let vec_cap = self.ghost.original_cap;
-        let vec_end_ptr = unsafe { vec_ptr.offset(vec_cap as isize) };
-        let ptr = self.ptr.as_ptr();
-        let ptr_in_bounds = vec_ptr <= ptr && ptr <= vec_end_ptr;
-        let cap_in_bounds = self.cap <= vec_cap;
+fn is_valid_kind_vec(&self) -> bool {
+    assert!(self.kind() == KIND_VEC);
+    let vec_ptr = self.ghost.original_vec_ptr.as_ptr();
+    let vec_cap = self.ghost.original_cap;
+    let vec_end_ptr = unsafe { vec_ptr.offset(vec_cap as isize) };
+    let ptr = self.ptr.as_ptr();
+    let ptr_in_bounds = vec_ptr <= ptr && ptr <= vec_end_ptr;
+    let cap_in_bounds = self.cap <= vec_cap;
 
-        ptr_in_bounds && cap_in_bounds
-    }
+    ptr_in_bounds && cap_in_bounds
+}
 ```
 
 Phew, that was a bit of work!
@@ -553,18 +553,18 @@ We have a one-step install process and examples, including all the code in this 
     Here's one possibility:
     
     ```rust
-        #[kani::proof]
-        fn split_off_maintains_well_formed() {
-            let mut a: BytesMut = kani::any();
-            let at = kani::any();
-            kani::assume(at <= a.capacity());
-            let b = a.split_off(at);
-            assert!(a.is_valid());
-            assert!(b.is_valid());
-            // Additional checks that the operation does what we expect
-            assert!(a.cap == at);
-            unsafe {
-                assert!(b.ptr.as_ptr() == a.ptr.as_ptr().offset(at as isize));
-            }
+    #[kani::proof]
+    fn split_off_maintains_well_formed() {
+        let mut a: BytesMut = kani::any();
+        let at = kani::any();
+        kani::assume(at <= a.capacity());
+        let b = a.split_off(at);
+        assert!(a.is_valid());
+        assert!(b.is_valid());
+        // Additional checks that the operation does what we expect
+        assert!(a.cap == at);
+        unsafe {
+            assert!(b.ptr.as_ptr() == a.ptr.as_ptr().offset(at as isize));
         }
+    }
     ```
