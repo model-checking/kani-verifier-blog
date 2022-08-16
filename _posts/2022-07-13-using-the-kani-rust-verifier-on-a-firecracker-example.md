@@ -203,7 +203,7 @@ Let's start with a simple one from the virtio specification.
 >
 > The driver MUST place any device-writable descriptor elements after any device-readable descriptor elements.
 >
-> Source: <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-280004>
+> [Source: Virtual I/O Device v1.1](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-280004)
 
 This is a requirement on the driver under the control of the guest.
 However, Firecracker cannot trust that this is the case: the requirement has to be validated.
@@ -305,18 +305,18 @@ This is an enum that includes guest memory errors such as requesting an invalid 
 The intention of our mock is to enable Kani to explore the behavior of a caller of `read_obj` (like `parse`) under any of these possibilities.
 
 ```rust
-    fn read_obj<T>(&self, addr: GuestAddress) -> Result<T, Error>
-    where
-        T: ByteValued + kani::Invariant + ReadObjChecks<T>,
-    {
-        if kani::any() {
-            let val = kani::any::<T>();
-            T::check_on_read_val(&self, &val);
-            Ok(val)
-        } else {
-            Err(kani::any::<Error>())
-        }
+fn read_obj<T>(&self, addr: GuestAddress) -> Result<T, Error>
+where
+    T: ByteValued + kani::Arbitrary + ReadObjChecks<T>,
+{
+    if kani::any() {
+        let val = kani::any::<T>();
+        T::check_on_read_val(&self, &val);
+        Ok(val)
+    } else {
+        Err(kani::any::<Error>())
     }
+}
 ```
 
 Now let's address the `ReadObjChecks` trait bound that we added, which allows us to call `T::check_on_read_val` where we pass in the generated symbolic value.
@@ -402,9 +402,9 @@ Look out for a follow up post where we'll use Kani on an example from [Tokio](ht
 
 ## Further Reading
 
-  - Firecracker: <https://firecracker-microvm.github.io/>
-  - Firecracker NSDI 2020 paper: <https://www.usenix.org/conference/nsdi20/presentation/agache>
-  - Firecracker's design doc: <https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md>
+  - [Firecracker project](https://firecracker-microvm.github.io/)
+  - [Firecracker NSDI 2020 paper](https://www.usenix.org/conference/nsdi20/presentation/agache)
+  - [Firecracker's design doc](https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md)
   - [Code and instructions for reproducing the results in this post](https://github.com/model-checking/kani/tree/main/tests/cargo-kani/firecracker-block-example)
 
 ## Footnotes
