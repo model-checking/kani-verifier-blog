@@ -178,10 +178,10 @@ If an instance of a data type satisfies its representation invariant we say the 
 Since `BytesMut` has two different representations we need to think about what properties each of them need.
 Let's begin with a property that should hold regardless of the representation: the instance's length must be within bounds of its capacity.
 We will also add calls to appropriate methods, to be defined, for each representation kind.
-In Kani, we have a trait `Invariant` that allows us to express when a type `T` is well-formed.
+In Kani, we can write a method `is_valid` to express when a type `T` is well-formed:
 
 ```rust
-unsafe impl kani::Invariant for BytesMut {
+impl BytesMut {
     fn is_valid(&self) -> bool {
         self.len <= self.cap
             && match self.kind() {
