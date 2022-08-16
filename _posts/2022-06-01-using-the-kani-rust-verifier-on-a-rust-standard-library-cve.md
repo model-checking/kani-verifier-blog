@@ -490,7 +490,7 @@ In our discussion of the CVE, we introduced the idea of a [*representation invar
 A representation invariant tells us when a queue is *well-formed*.
 This is the case if the buffer capacity is a (nonzero) power of two and if the `head` and `tail ` index within the buffer.
 [Recall that these properties are precisely the ones checked using `debug_assert` in `handle_capacity_increase`.]
-In Kani, we can write a method `is_valid` to express that a type `T` fulfills its type invariant:
+In Kani, we can write a method `is_valid` to express that a type `T` is well-formed:
 
 ```rust
 impl AbstractVecDeque {
@@ -501,7 +501,7 @@ impl AbstractVecDeque {
 ```
 
 Then, we can use this method to implement `kani::any::<T>()`, required by the `Arbitrary` trait from Kani,
-to generate symbolic values of type `T` that respect its type invariant as follows:
+to generate well-formed symbolic values of type `T` as follows:
 
 ```rust
 impl kani::Arbitrary for AbstractVecDeque {
