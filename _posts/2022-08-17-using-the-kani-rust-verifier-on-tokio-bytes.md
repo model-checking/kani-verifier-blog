@@ -47,13 +47,13 @@ struct Shared {
 The straightforward part is the first three fields.
 Similar to a `Vec<u8>`, we have a pointer `ptr` to the backing buffer of size `cap` bytes with `len` bytes currently in use.
 The field `data` is a bit trickier because it handles sharing of the backing buffer.
-In particular, `data` is used to distinguish between two kinds of representation: `KIND_VEC` and `KIND_ARC`.
+In particular, `data` is used to distinguish between two representation modes: `KIND_VEC` and `KIND_ARC`.
 - A `KIND_VEC` is used when the backing buffer is only pointed to by `ptr`.
 In this case, `data` is not used as a pointer but instead contains a sentinel value (the bottom bit is set to `'0b1`) to mark that we're using this representation.
 - A `KIND_ARC` is used when the backing buffer is shared by multiple `BytesMut` instances.
 In this case, each instance's `data` field points to a single `Shared` object whose `ref_count` keeps track of the number of aliases.
 In order for this aliasing to be safe, the implementation must ensure that each instance `ptr` field points to a disjoint part of the slice.
-[Additionally, the rules for [pointer alignment](https://doc.rust-lang.org/reference/type-layout.html#pointers-and-references-layout) ensure that we will never mix up representations (since the bottom bit of a pointer will always be `0`).]
+[Additionally, the rules for [pointer alignment](https://doc.rust-lang.org/reference/type-layout.html#pointers-and-references-layout), and the fact that `Shared` has `align > 1`, ensure that we will never mix up representations.]
 
 As a user of `BytesMut` you don't need to worry about this distinction.
 Under the hood, the implementation will switch representations as required [and, within the library implementation, we can use the private method `kind()` to query the representation of a given instance].
@@ -273,7 +273,7 @@ fn is_valid_kind_arc(&self) -> bool {
 This gives us an idea!
 What if we could keep track of the original vector for `KIND_VEC` too?
 The use of program state that is just for verification is known as *ghost state*, originally called [auxiliary variables](https://dl.acm.org/doi/pdf/10.1145/360051.360224).
-You can think of it as metadata only for the purposes of Kani that can be ignored by compilation (and hence has no runtime cost).
+You can think of it as metadata only for the purposes of Kani that can be ignored by compilation (and hence has no runtime cost, although the layout will change in Kani).
 Here's what we need:
 
 ```rust
@@ -352,8 +352,8 @@ mod verification {
     #[kani::proof]
     fn with_capacity_returns_well_formed_bytes_mut() {
         let cap = kani::any();
-        kani::assume(0 < cap);                       //< (1)
-        kani::assume(    cap < MAX_KANI_ALLOCATION); //< (2)
+        kani::assume(0 < cap);                   //< (1)
+        kani::assume(cap < MAX_KANI_ALLOCATION); //< (2)
         let a = BytesMut::with_capacity(cap);
         assert!(a.kind() == KIND_VEC);
         assert!(a.is_valid());
@@ -417,7 +417,7 @@ impl kani::Arbitrary for BytesMut {
     fn any() -> Self {
         let cap = kani::any();
         kani::assume(0 < cap);
-        kani::assume(    cap < MAX_KANI_ALLOCATION);
+        kani::assume(cap < MAX_KANI_ALLOCATION);
         let b = BytesMut::with_capacity(cap);          //< (1)
         let make_kind_arc = kani::any();               //< (2)
         if make_kind_arc {
