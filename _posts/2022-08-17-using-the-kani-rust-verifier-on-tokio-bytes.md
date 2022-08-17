@@ -62,10 +62,10 @@ A simplified state machine of when the representation changes is as follows:
 <img src="{{site.baseurl | prepend: site.url}}/assets/diagrams/bytes-mut-fsm.png"/>
 
 Constructors such as `new()` (and others like `with_capacity()` and `zeroed()`) create fresh instances of `BytesMut`.
-By construction these are `KIND_VEC` since there is exactly one instance that points to the backing buffer: the one we are creating.
+By construction, these are `KIND_VEC` since there is exactly one instance that points to the backing buffer: the one we are creating.
 
-Operations like `split_off(&mut self, at: usize) -> BytesMut` (and others like `split()` and `split_to()`) allow us to split the bytes into two.
-In the case of `split_off`, we split at the index `at` so that afterwards `self` contains elements `[0,at)` and the returned `BytesMut` contains elements `[at, cap)`.
+Operations like `split_off(&mut self, at: usize) -> BytesMut` (and others like `split()` and `split_to()`) allow us to split the bytes into two segments.
+In the case of `split_off`, we split at the index `at` so that afterwards `self` contains elements `[0, at)` and the returned `BytesMut` contains elements `[at, cap)`.
 Internally this means that, after the call, both `self` and the returned `BytesMut` must be `KIND_ARC`.
 For example:
 
@@ -101,7 +101,7 @@ assert_eq!(&b[..], b"world");
 Notice that after the `split_off` operation, both `a` and `b` share the same backing buffer (`ref_count` is `2`) but point to disjoint slices.
 
 Finally, it is possible for the representation to return from `KIND_ARC` back to `KIND_VEC` using `reserve(&mut self, additional:usize)`, which ensures that there is capacity for at least `additional` more bytes to be inserted.
-If `self` does not have sufficient space then a fresh backing buffer is allocated and the contents of the original are copied over.
+If `self` does not have sufficient space, then a fresh backing buffer is allocated and the contents of the original are copied over.
 Continuing from our example above:
 
 ```rust
@@ -273,7 +273,7 @@ fn is_valid_kind_arc(&self) -> bool {
 This gives us an idea!
 What if we could keep track of the original vector for `KIND_VEC` too?
 The use of program state that is just for verification is known as *ghost state*, originally called [auxiliary variables](https://dl.acm.org/doi/pdf/10.1145/360051.360224).
-You can think of it as metadata only for the purposes of Kani that can be ignored by compilation (and hence has no runtime cost, although the layout will change in Kani).
+You can think of it as metadata only for the purposes of Kani, that can be ignored by compilation (and hence has no runtime cost[^footnote-layout]).
 Here's what we need:
 
 ```rust
@@ -524,6 +524,8 @@ We have a one-step install process and examples, including all the code in this 
     By using [`atomic operations`](https://doc.rust-lang.org/std/sync/atomic/) we are guaranteed that we will never lose an update.
     So it's essential that the type of `ref_count` is `AtomicUSize`.
     [In fact, a strict reading of Rust's [*atomic memory model*](https://doc.rust-lang.org/nomicon/atomics.html), which specifies the behavior of concurrent shared memory programs, is that a `ref_count` implementation using non-atomics is *undefined* since it involves a non-atomic data race.]
+
+[^footnote-layout]: Note that this will change the layout in Kani.
 
 [^footnote-uninit-mem]:
     You may wonder whether this update to `len` is safe.
