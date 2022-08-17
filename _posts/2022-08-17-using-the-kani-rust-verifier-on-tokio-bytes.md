@@ -59,18 +59,7 @@ As a user of `BytesMut` you don't need to worry about this distinction.
 Under the hood, the implementation will switch representations as required [and, within the library implementation, we can use the private method `kind()` to query the representation of a given instance].
 A simplified state machine of when the representation changes is as follows:
 
-```
-  │
-  │ new()
-  ▼
-┌──────────┐  split_off()   ┌──────────┐
-│ KIND_VEC │ ─────────────► │ KIND_ARC │
-└──────────┘                └──────────┘
-  ▲                           │
-  │                           │
-  └───────────────────────────┘
-                    reserve()
-```
+<img src="{{site.baseurl | prepend: site.url}}/assets/diagrams/bytes-mut-fsm.png"/>
 
 Constructors such as `new()` (and others like `with_capacity()` and `zeroed()`) create fresh instances of `BytesMut`.
 By construction these are `KIND_VEC` since there is exactly one instance that points to the backing buffer: the one we are creating.
