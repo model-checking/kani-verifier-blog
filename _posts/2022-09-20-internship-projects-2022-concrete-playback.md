@@ -36,7 +36,7 @@ As you may know, Kani uses [CBMC](https://github.com/diffblue/cbmc) to perform
 the main analysis required for verification. When one or more checks have failed,
 that's a verification failure. In these cases, CBMC can return a text-based
 trace which includes the sequence of steps leading to the failed check. We often
-call this a (proof) counter-example.
+call this trace a counter-example.
 
 At the moment, the main tool for proof debugging in Kani is
 [`cbmc-viewer`](https://github.com/model-checking/cbmc-viewer). `cbmc-viewer` is
@@ -197,8 +197,8 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-There are some neat details about this mode that have implemented after watching
-our users trying the feature.
+There are some neat details about this mode that have been implemented after
+watching our users trying the feature.
 For example, the name of the test contains a _hash value_ that depends on the
 concrete values, to avoid having repeated unit tests in the code.
 Another improvement is that Kani will format the code with `rustfmt` after
