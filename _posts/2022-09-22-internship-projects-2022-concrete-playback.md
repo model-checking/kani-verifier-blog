@@ -5,11 +5,11 @@ title:  "Internship Projects 2022: Concrete Playback"
 
 Today we're starting a series of posts about the internship projects carried out
 in our team during 2022. The Kani team is proud to be part of the AWS Automated
-Reasoning teams, which every year hosts a number of interns to work on
+Reasoning teams, which every year host a number of interns to work on
 automated-reasoning projects for tools like Kani. More details on AWS Automated
-Reasoning areas of work and available locations can be found here. If you're a
-Masters or PhD interested in Automated Reasoning, please consider applying to
-the following openings:
+Reasoning areas of work and available locations can be found [here](https://2023arinternships.splashthat.com/).
+If you're a Masters or PhD student interested in Automated Reasoning, please
+consider applying to the following openings:
  * [2023 Applied Science Internship (Master's student)](https://www.amazon.jobs/en/jobs/2173429/2023-applied-science-internship-automated-reasoning-united-states)
  * [2023 Applied Science Internship (PhD student)](https://www.amazon.jobs/en/jobs/2173372/2023-applied-science-internship-automated-reasoning-united-states)
 
@@ -17,16 +17,18 @@ the following openings:
 [Sanjit Bhat](https://sanjit-bhat.github.io/). Sanjit joined the Kani team as an SDE Intern
 while finishing his undergraduate studies at [UT
 Austin](https://www.utexas.edu/) and is now a PhD student at
-[MIT](https://www.mit.edu/). We wish him the best in his PhD studies!
+[MIT](https://www.mit.edu/). We are very grateful to Sanjit for his hard work on this
+project, and wish him the best in his PhD studies!
 
 ## Proof Debugging
 
 We commonly use the term **Proof Debugging** to refer to the process of
 debugging failing proofs that we expected to succeed.
-The process isn't very different to debugging unit tests: There's one or more errors
-due to assumptions made about the function under test, and how the inputs and/or outputs
-relate to that function. The goal then is to find what assumption was made and
-correct it accordingly.
+The process isn't very different to debugging unit tests: There's one or more
+errors due to assumptions made about the function under test, and how the inputs
+and/or outputs relate to that function.
+The goal then is to find what assumption was mistakenly made and correct it
+accordingly.
 
 Let's talk about how tooling can make this process easier for users.
 
@@ -38,7 +40,7 @@ that's a verification failure. In these cases, CBMC can return a text-based
 trace which includes the sequence of steps leading to the failed check. We often
 call this trace a counter-example.
 
-At the moment, the main tool for proof debugging in Kani is
+Until now, the main tool for proof debugging in Kani was
 [`cbmc-viewer`](https://github.com/model-checking/cbmc-viewer). `cbmc-viewer` is
 an open-source tool that scans different formats of CBMC traces and produces a
 browsable HTML report based on that output. Thanks to this tool, the trace can
@@ -117,7 +119,7 @@ Now we'll see how to run concrete playback on this example.
 
 ### Concrete playback in action
 
-In order to run the concrete playback, we have to invoke Kani with the `--concrete-playback=<mode>` flag.
+In order to run concrete playback, we have to invoke Kani with the `--concrete-playback=<mode>` flag.
 Here, `mode` can be either `print` or `inplace`.
 Also, because concrete playback is an unstable feature, we'll need to pass `--enable-unstable` in addition to the other flags.
 
@@ -159,7 +161,7 @@ vector is a sequence of eight bytes (or `u8` values), which is just another way
 to represent a `u64` value. In summary, Kani requires each variable assigned
 `kani::any()` in our harness (`factor`, `width`, and `height`) to be initialized
 byte by byte, and that's why we need three 8-byte vectors.
-Because bytes are not easy to read for humans, we add a comment above each bytes
+Because bytes are not easy to read for humans, we add a comment above each byte
 vector with the value it represents.
 
 Now let's run Kani with the `inplace` mode:
@@ -171,7 +173,7 @@ INFO: Parsing concrete values from property `rectangle::stretched_rectangle_can_
 INFO: Now modifying the source code to include the concrete playback unit test `kani_concrete_playback_stretched_rectangle_can_hold_original_11077055701284606517`.
 ```
 
-The test unit that was printed out is now added to the source code
+The test unit that was printed out is added to the source code
 automatically! Now we can run the test that Kani inserted into
 the source code, which can be done[^footnote-setup] with the default
 command for running Rust unit tests:
@@ -197,11 +199,11 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-In fact, if you've configured your IDE with `rust-analyzer`, you may even run or
-debug the test using the options that appear around the `#[test]` annotation.
+In fact, if you've configured your IDE with
+[`rust-analyzer`](https://rust-analyzer.github.io/), you may even run or debug
+the test using the options that appear around the `#[test]` annotation.
 In [VSCode](https://code.visualstudio.com/), for example, they can be found
 below.
-
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vscode-buttons.png"/>
 
