@@ -197,14 +197,29 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-There are some neat details about this mode that have been implemented after
-watching our users trying the feature.
+In fact, if you've configured your IDE with `rust-analyzer`, you may even run or
+debug the test using the options that appear around the `#[test]` annotation.
+In [VSCode](https://code.visualstudio.com/), for example, they can be found
+below.
+
+
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vscode-buttons.png"/>
+
+In particular, the `Debug` mode may be really useful to debug complex traces.
+Setting up a breakpoint before the line that triggers the failure and running
+`Debug` will allow you to inspect the values of all variables at that point.
+
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vscode-variables.png"/>
+
+In most cases, this information should be enough to properly debug the proof you
+were working on!
+
+There are some neat details about the `inplace` mode that have been implemented
+after watching our users trying out the feature.
 For example, the name of the test contains a _hash value_ that depends on the
 concrete values, to avoid having repeated unit tests in the code.
 Another improvement is that Kani will format the code with `rustfmt` after
 adding the test to the source code, so we keep it formatted at all times.
-
-
 
 ### How it all works
 
