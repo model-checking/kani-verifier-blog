@@ -155,7 +155,7 @@ As you'd expect, this has no problems and confirms the behavior explained above.
 In this particular case, there is no advantage to using Kani rather than running the test, but it is nice to show Kani handling code that internally uses unsafe Rust.
 
 ```bash
-$ cargo kani --harness test_kind_representation
+$ cargo kani --harness test_kind_representation_change
 # --snip--
 VERIFICATION:- SUCCESSFUL
 ```
