@@ -28,6 +28,7 @@ fn test_update_account_balance() {
     assert!(balance_update_is_correct(current_balance, amount, new_balance));
 }
 ```
+where `balance_update_is_correct` checks that the transaction was carried out correctly, and may include other properties as well, for example that no overflow occurred, there was enough balance for a withdrawal, etc.
 
 The question then is: how do we generate values for `current_balance` and `amount` for this property-based test harness?
 The answer depends on the testing technique we want to use.
@@ -277,7 +278,7 @@ So in that sense, Kani and fuzzing are complementary.
 Second, Kani currently supports a few platforms (e.g. `x86_64` and `arm64-apple`), so testing software targeting other platforms can only be done using Bolero's fuzzing engines.
 
 Third, software has bugs (including verification tools!).
-More specifically, Kani uses multiple tools and components that include the Rust compiler's front-end, the [MIR](https://rustc-dev-guide.rust-lang.org/mir/index.html)to [GOTO](https://diffblue.github.io/cbmc//group__goto-programs.html) translation, and the solver (CBMC + Minisat), any of which may have bugs!
+More specifically, Kani uses multiple tools and components that include the Rust compiler's front-end, the [MIR](https://rustc-dev-guide.rust-lang.org/mir/index.html) to [GOTO](https://diffblue.github.io/cbmc//group__goto-programs.html) translation, and the solver (CBMC + Minisat), any of which may have bugs!
 So using multiple verification approaches helps provide more assurance.
 
 ## How is Kani integrated in Bolero?
