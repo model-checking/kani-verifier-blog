@@ -69,7 +69,7 @@ afl::fuzz!(|(current_balance: i32, amount: i32)| {
 }
 ```
 
-What if we want to apply *all* the testing techniques described above?
+What if we want to apply *all* the testing techniques described above to leverage their unique strengths?
 In this case, we end up having to write multiple harnesses in our code to test the same function.
 In addition, in order to run those harnesses, we would need a number of different commands, e.g. `cargo test` for running the random test, `cargo fuzz` to run the `libfuzzer` test, and `cargo afl` to run the AFL test!
 This quickly goes out of hand and becomes difficult to manage.
@@ -81,7 +81,7 @@ For example, to test function `update_account_balance`, one can write a Bolero h
 ```rust
 #[test]
 fn test_update_account_balance_bolero() {
-    bolero::check!().with_type::<(i32, i32)>().cloned().for_each(|(a, b)| {
+    bolero::check!().with_type::<(i32, i32)>().cloned().for_each(|(current_balance, amount)| {
         let result = update_account_balance(current_balance, amount);
         assert!(balance_update_is_correct(current_balance, amount, result));
     });
