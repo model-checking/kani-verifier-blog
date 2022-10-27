@@ -260,7 +260,7 @@ VERIFICATION:- SUCCESSFUL
 Verification Time: 0.90419155s
 ```
 
-and voila! Kani managed to prove that there none of the checks can fail for any values of the inputs.
+and voila! Kani managed to prove that none of the checks can fail for any values of the inputs.
 
 ## If we have proof capability, do we still need fuzzing?
 
