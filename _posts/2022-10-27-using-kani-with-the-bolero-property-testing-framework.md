@@ -90,7 +90,7 @@ fn test_update_account_balance_bolero() {
 ```
 
 Let's break this up a bit to understand what it's doing.
-First, the harness calls the [`check`](https://docs.rs/bolero/0.7.0/bolero/macro.check.html) macro, which is Bolero's main API for creating a test target.
+First, the harness calls the [`check`](https://docs.rs/bolero/0.8.0/bolero/macro.check.html) macro, which is Bolero's main API for creating a test target.
 The test target can be configured to generate values of specific types via the `with_type` method.
 In our case, we configure it to generate a pair of `i32`'s.
 Next, `cloned` clones the generated values, and the `for_each` method calls the supplied closure for each generated value.
@@ -102,7 +102,7 @@ To understand how, let's look at Bolero's main CLI command:
 
 ```bash
 $ cargo bolero test --help
-cargo-bolero-test 0.7.0
+cargo-bolero-test 0.8.0
 Run an engine for a target
 
 USAGE:
@@ -307,5 +307,5 @@ To get started, check out the Bolero and Kani tutorials at the following links:
 
 ```toml
 [dev-dependencies]
-bolero = "0.7.0"
+bolero = "0.8.0"
 ```
