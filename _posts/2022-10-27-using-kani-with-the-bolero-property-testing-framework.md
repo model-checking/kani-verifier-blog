@@ -140,7 +140,7 @@ fn test_update_account_balance_kani() {
 }
 ```
 
-We can then run `cargo kani` to check the harness.[^footnote-kani].
+We can then run `cargo kani` to check the harness[^footnote-kani].
 But wouldn't it be nice if we can instead re-use the Bolero harness that we wrote above?
 This is where Kani's integration in Bolero comes to play!
 
@@ -193,7 +193,7 @@ whose purpose is to treat this function as a proof harness when run with Kani, b
 
 The Bolero harness generates arrays of length `N` (set to 5 in this example), and an index, calls `nth_rev`, and checks that it returns `Some` if the index it received was less than the array length.
 
-Let's first test this with fuzzing using Bolero's default engine (`libfuzzer`):[^footnote-dev-dep]:
+Let's first test this with fuzzing using Bolero's default engine (`libfuzzer`)[^footnote-dev-dep]:
 
 ```bash
 $ cargo bolero test check_rev
@@ -289,7 +289,7 @@ For instance, Bolero supports generating values in a restricted range `[min, max
 bolero::check!().with_generator(5..37).for_each( // snip... );
 ```
 
-To support those in the Kani mode, Bolero leverages assumptions (`[kani::assume](https://model-checking.github.io/kani/tutorial-first-steps.html#assertions-assumptions-and-harnesses)`) under the hood:
+To support those in the Kani mode, Bolero leverages assumptions ([`kani::assume`](https://model-checking.github.io/kani/tutorial-first-steps.html#assertions-assumptions-and-harnesses)) under the hood:
 
 ```rust
 let value = kani::any();
@@ -303,11 +303,11 @@ To get started, check out the Bolero and Kani tutorials at the following links:
 
 ## Footnotes
 
-[^footnote-kani] Note that this harness cannot be compiled or executed with `rustc` as it involves some Kani attributes/functions that are only interpreted by `cargo kani`
+[^footnote-kani]: Note that this harness cannot be compiled or executed with `rustc` as it involves some Kani attributes/functions that are only interpreted by `cargo kani`
 
-[^footnote-dev-dep] Before running Bolero, make sure to include it as a dev dependency in the `Cargo.toml`:
+[^footnote-dev-dep]: Before running Bolero, make sure to include it as a dev dependency in the `Cargo.toml`:
 
-```toml
-[dev-dependencies]
-bolero = "0.8.0"
-```
+    ```toml
+    [dev-dependencies]
+    bolero = "0.8.0"
+    ```
