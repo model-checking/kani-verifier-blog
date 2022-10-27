@@ -264,7 +264,7 @@ and voila! Kani managed to prove that none of the checks can fail for any values
 
 ## If we have proof capability, do we still need fuzzing?
 
-One question that might arise is: is there any point in using fuzzing alongside with Kani?
+One question that might arise is: is there any point in using fuzzing alongside Kani?
 In other words, if we can prove a harness for all inputs with Kani, would we still want to use fuzzing?
 The answer is yes, because fuzzing and Kani provide complementary benefits.
 Kani verifies a Rust program by symbolically analyzing its code.
