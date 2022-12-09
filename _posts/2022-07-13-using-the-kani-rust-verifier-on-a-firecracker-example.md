@@ -376,7 +376,7 @@ mod verification {
 ```
 
 Passing the harness to Kani results in `VERIFICATION:- SUCCESSFUL` in a few seconds.
-As sanity check, if we insert an issue such as forgetting a validity check to ensure the third buffer is read-only, then Kani reports an error (since in this case it is possible to fail virtio requirement 2.6.4.2 but return a valid `Request`).
+As sanity check, if we insert an issue such as forgetting a validity check to ensure the third buffer is write-only, then Kani reports an error (since in this case it is possible to fail virtio requirement 2.6.4.2 but return a valid `Request`).
 Our example is available in Kani's test directory with instructions on reproducing these results.
 
 But what does this result mean?
