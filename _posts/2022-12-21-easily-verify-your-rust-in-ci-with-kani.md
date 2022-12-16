@@ -21,7 +21,7 @@ To this end, we are excited to announce the [Kani Rust Verifier Action](https://
 
 ## How to use the Kani GitHub action
 
-If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action is as simple as adding it to your `ci.yaml` file.
+If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action is as simple as adding it to your GitHub Actions workflow file.
 Your Kani checks will appear as part of the same workflow as your existing tests, as shown in this [s2n-quic](https://github.com/aws/s2n-quic) CI report:
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-in-s2n-quic-ci.png" alt="s2n-quic CI report showing both tests and Kani proofs verified on a pull request" />
@@ -83,7 +83,7 @@ For full details, consult [the documentation](https://model-checking.github.io/k
 
 ## When to run the Kani action
 
-CI systems such as GitHub Actions offer multiple options CI workflows, such as the Kani action, should execute.
+CI systems such as GitHub Actions offer multiple options for when workflows, such as the Kani action, should execute.
 Options include validating every push to every PR, validating once on a PR right before merge, or validating on a fixed time interval, such as nightly. 
 In general, the sooner verification runs, the better: it’s easier to debug and fix issues when they’re found right away, rather than after they’re merged.
 
