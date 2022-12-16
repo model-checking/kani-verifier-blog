@@ -42,7 +42,7 @@ For more advanced use cases, we provide facilities to override the working direc
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/s2n-quic-using-kani-action.png" alt="How s2n quic integrates the Kani action" />
 
-For full details, consult [the documentation](https://model-checking.github.io/kani/install-github-ci.html)
+For full details, consult [the documentation](https://model-checking.github.io/kani/install-github-ci.html).
 
 ## When to run the Kani action
 
