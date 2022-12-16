@@ -13,7 +13,7 @@ Similarly, **Continuous Verification** enables developers to prevent regressions
 
 ## How to use the Kani GitHub action
 
-If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action as simple as adding it to your `ci.yaml` file, where `<MAJOR>.<MINOR>` is the version of Kani you wish to use.  
+If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action is as simple as adding it to your `ci.yaml` file, where `<MAJOR>.<MINOR>` is the version of Kani you wish to use.  
 
 To get the latest version, visit the [kani verifier action](https://github.com/marketplace/actions/kani-rust-verifier) on the marketplace, and click on the green “Use Latest Version” button, which will give you a yaml snippet you can paste into your `.yml` file.
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-verifier-action.png" alt="Kani Verifier Action on GitHub Marketplace" />
