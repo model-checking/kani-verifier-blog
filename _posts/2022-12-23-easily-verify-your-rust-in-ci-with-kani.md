@@ -1,17 +1,18 @@
 ---
 layout: post
-title: "Easily verify your Rust in CI with Kani and Github Actions "
+title: "Easily verify your Rust in CI with Kani and Github Actions"
 ---
 
 Formal verification tools, such as Kani, are valuable because they provide a way to definitively check, using mathematical techniques, whether a property of your code is true under all circumstances.
-To put it colloquially: testing is great for catching the FIRST bug, formal verification is great for knowing you’ve caught the LAST bug.
+To put it colloquially: testing is great for catching the **first** bug, formal verification is great for knowing you’ve caught the **last** bug.
+To learn more about Kani, and how you can use it to prevent bugs in your Rust code, you can [read the Kani documentation](https://model-checking.github.io/kani/), or [consult the real-world examples on our blog](../../..).
 
 Code, however, is seldom static.
 As code evolves, how can we ensure that it remains correct; i.e.
-how do we catch the NEXT bug?
+how do we catch the **next** bug?
 In the testing world, this is where **Continuous Integration** (CI) shines: by ensuring that tests are re-run on all code-changes, CI enables developers to catch bugs before they impact users.
 Many platforms, such as GitHub, provide facilities to automatically incorporate CI into existing development workflows.
-For example, [GitHub Actions](https://github.com/features/actions) provides developers with a facility to run checks, ranging from tests, to linters, to code-formatters, and have the results displayed on on the pull request (PR) in real time.
+For example, [GitHub Actions](https://github.com/features/actions) provides developers with a facility to run checks, ranging from tests, to linters, to code-formatters, and have the results displayed on the pull request (PR) in real time.
 Repositories can even [require that certain checks pass before merging a PR](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches#require-status-checks-before-merging).
 For example, on our own Kani repo, a CI status report on a PR might look like this:
 
@@ -23,12 +24,12 @@ To this end, we are excited to announce the [Kani Rust Verifier Action](https://
 
 ## How to use the Kani GitHub action
 
-If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action is as simple as adding it to your `ci.yaml` file, where `<MAJOR>.<MINOR>` is the version of Kani you wish to use.
+If you have a [Rust Cargo](https://doc.rust-lang.org/cargo/) project in a GitHub repo, using the Kani CI action is as simple as adding it to your `ci.yaml` file.
 
 To get the latest version, visit the [kani verifier action](https://github.com/marketplace/actions/kani-rust-verifier) on the marketplace, and click on the green “Use Latest Version” button, which will give you a yaml snippet you can paste into your `.yml` file.
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-verifier-action.png" alt="Kani Verifier Action on GitHub Marketplace" />
 
-For example, for kani 0.17, your `kani-ci.yml` file might look like this:
+For example, for Kani 0.16, your `kani-ci.yml` file might look like this:
 
 ```yaml
 name: Kani CI
@@ -45,7 +46,7 @@ jobs:
 # You can get the latest version from
 # https://github.com/marketplace/actions/kani-rust-verifier
       - name: 'Run Kani on your code.'
-        uses: model-checking/kani-github-action@v0.17
+        uses: model-checking/kani-github-action@v0.16
 ```
 
 For more advanced use cases, we provide facilities to override the working directory, as well as to configure the Kani command itself.
@@ -75,5 +76,5 @@ By default, these machines are [not particularly powerful](https://docs.github.c
 Formal verification can be memory and compute intensive: if you find the Kani action running out of memory and CPU, we suggest using [large runners](https://docs.github.com/en/actions/using-github-hosted-runners/using-larger-runners) or [AWS CodeBuild](https://aws.amazon.com/codebuild/).
 
 To test drive Kani yourself, check out our [“getting started” guide](https://model-checking.github.io/kani/getting-started.html).
-We have a one-step install process and examples, so you can try proving your code today.
+We have a one-step install process and examples, so you can start proving your code today.
 If you are running into issues with Kani or have feature requests or suggestions, we’d [love to hear from you](https://github.com/model-checking/kani/issues).
