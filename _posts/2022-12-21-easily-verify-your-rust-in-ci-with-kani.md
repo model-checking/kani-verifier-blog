@@ -3,18 +3,15 @@ layout: post
 title: "Easily verify your Rust in CI with Kani and Github Actions"
 ---
 
-Formal verification tools like Kani definitively check that certain classes of bugs will not occur in your program under any circumstance.
-Kani uses mathematical techniques to explore your code over all inputs, meaning that while testing is a great way to catch the *first* bug, formally verifying your code with Kani guarantees that you've caught the *last* bug.
+Formal verification tools like Kani check that certain classes of bugs will not occur in your program under any circumstance.
+Kani uses mathematical techniques to explore your code over all inputs, meaning that while testing is a great way to catch the *first* bug, formally verifying your code with Kani is a great way to validate that you've caught the *last* bug.
 To learn more about Kani, and how you can use it to prevent bugs in your Rust code, you can [read the Kani documentation](https://model-checking.github.io/kani/), or [consult the real-world examples on our blog]({{site.baseurl | prepend: site.url}}).
 
 Code, however, is seldom static.
 As code evolves, how can we ensure that it remains correct; i.e. how do we catch the *next* bug?
 Many codebases already contain test suites and other checks that can run automatically.
 Developers can use a platform like [GitHub Actions](https://github.com/features/actions) to run these tests upon every code change, as part of continuous integration, and even [ensure that the tests pass before the code can be merged](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches#require-status-checks-before-merging).
-This assures developers that a code change does not introduce a bug for all the inputs that the test suite exercises.
-For example, on our own Kani repo, a CI status report on a PR might look like this:
-
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-ci-checks.png" alt="A list of tests and checks run on a pull request as part of continuous integration, with all checks required and passing" />
+This assures developers that a code change does not introduce a bug for inputs covered by the test suite.
 
 For developers looking for a higher assurance of software quality, Kani proofs can be validated automatically as part of continuous integration.
 To this end, we are excited to announce the [Kani Rust Verifier Action](https://github.com/marketplace/actions/kani-rust-verifier) on the GitHub Marketplace.
