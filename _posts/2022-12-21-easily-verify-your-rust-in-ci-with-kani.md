@@ -26,9 +26,6 @@ Your Kani checks will appear as part of the same workflow as your existing tests
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-in-s2n-quic-ci.png" alt="s2n-quic CI report showing both tests and Kani proofs verified on a pull request" />
 
-
-
-
 To get the latest version, visit the [kani verifier action](https://github.com/marketplace/actions/kani-rust-verifier) on the marketplace, and click on the green “Use Latest Version” button, which will give you a yaml snippet you can paste into your `.yml` file.
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/kani-verifier-action.png" alt="A list of tests and checks run on a pull request as part of continuous integration, with all checks required and passing" />
 
