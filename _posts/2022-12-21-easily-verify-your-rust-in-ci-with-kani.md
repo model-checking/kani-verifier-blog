@@ -47,7 +47,7 @@ jobs:
 ```
 
 For more advanced use cases, we provide facilities to override the working directory, as well as to configure the Kani command itself.
-For example, the [s2n-quic](https://github.com/aws/s2n-quic) project uses [the following CI configuration](https://github.com/aws/s2n-quic/blob/main/.github/workflows/ci.yml#L613), which overrides the working directory, and enables the `--tests` option of `cargo kani`.
+For example, the [s2n-quic](https://github.com/aws/s2n-quic) project uses [the following CI configuration](https://github.com/aws/s2n-quic/blob/c221530beb37addf81c7ed58461a945750a1b251/.github/workflows/ci.yml#L613), which overrides the working directory, and enables the `--tests` option of `cargo kani`.
 
 ```yaml
 on:
