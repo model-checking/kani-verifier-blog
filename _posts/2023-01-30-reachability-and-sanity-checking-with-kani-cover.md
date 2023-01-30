@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Checking Code Reachability and Sanity Checking Proof Harnesses with `kani::cover`"
+title: "Checking Code Reachability and Sanity Checking Proof Harnesses with kani::cover"
 ---
 
 Kani is a verification tool that can help you prove properties about your Rust code.
@@ -452,5 +452,5 @@ In this post, we discussed two applications of the `kani::cover` macro. We'd lik
 
 ## References:
 
-1. Cover Statement RFC: https://model-checking.github.io/kani/rfc/rfcs/0003-cover-statement.html
-2. Documentation for `kani::cover`: https://model-checking.github.io/kani/crates/doc/kani/macro.cover.html
+1. Cover Statement RFC: <https://model-checking.github.io/kani/rfc/rfcs/0003-cover-statement.html>
+2. Documentation for `kani::cover`: <https://model-checking.github.io/kani/crates/doc/kani/macro.cover.html>
