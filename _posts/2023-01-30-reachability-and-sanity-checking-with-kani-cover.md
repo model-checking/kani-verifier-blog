@@ -15,11 +15,11 @@ Let's start by explaining what `kani::cover` is.
 
 ## What is `kani::cover`?
 
-In a nutshell, `kani::cover` is a macro that instructs Kani to check whether a certain condition at a certain point in the code can be satisfied in at least one execution.
+In a nutshell, `kani::cover` is a macro that instructs Kani to check whether a certain condition at a certain point in the code can be satisfied from a given harness by at least one execution.
 For each `kani::cover` call, Kani analyzes the code and arrives at one of two possible outcomes:
 
 1. It finds a possible execution of the program that satisfies the condition
-2. It proves that no such execution is possible
+2. It proves that no such execution is possible from the given harness
 
 Let's go through an example.
 Suppose we'd like to find out if there's a 16-bit integer greater than 8 whose cube, computed with wrapping multiplication, can yield the value 8.
@@ -91,14 +91,14 @@ The next section addresses this question.
 
 Let's look at how Kani interprets `kani::cover` and `assert`:
 
-* As explained above, for `kani::cover!(condition)`, Kani checks if there's an execution that satisfies `condition` --- in which case, the cover property is satisfiable, or concludes that no such execution exists --- in which case the cover property is unsatisfiable.
-* On the other hand, for `assert!(condition)`, Kani checks if there's an execution that *violates* `condition` --- in which case, the assertion fails, or concludes that no such input value exists --- in which case the assertion holds.
+* As explained above, for `kani::cover!(condition)`, Kani checks if there's an execution from a given harness that satisfies `condition` --- in which case, the cover property is satisfiable, or concludes that no such execution exists --- in which case the cover property is unsatisfiable.
+* On the other hand, for `assert!(condition)`, Kani checks if there's an execution from a given harness that *violates* `condition` --- in which case, the assertion fails, or concludes that no such input value exists --- in which case the assertion holds.
 
 These descriptions sound very similar, don't they?
 Indeed, they are just inverses of each other!
 In fact, Kani more or less models `kani::cover!(condition)` as `assert!(!condition)` under the hood (with some caveats).
 If it finds an execution that violates the assertion (i.e. causes `!condition` to be false), then this execution satisfies the condition, and hence the cover property.
-If on the other hand, it proves that no such execution can cause the assertion to be violated, then it has proven that the cover property is unsatisfiable!
+If on the other hand, it proves that no such execution from the given harness can cause the assertion to be violated, then it has proven that the cover property is unsatisfiable in that harness!
 
 Let's go through a couple of applications of `kani::cover` to see how it can be used in practice.
 
