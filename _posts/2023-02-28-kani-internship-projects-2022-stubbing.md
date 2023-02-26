@@ -255,7 +255,8 @@ This is easy to do since we're deriving `kani::Arbitrary` for `MyStruct`.
 In principle, this may look like an **over-approximation** because we generate a symbolic value for `MyStruct`.
 But actually, we're missing something:
 [`serde_json::Result<T>`](https://docs.rs/serde_json/latest/serde_json/type.Result.html) can also return a `serde_json::Error` if the deserialization fails.
-However, our `stub_deserialize` function assumes that this case will never happen, so it's actually an **under-approximation**!
+However, our `stub_deserialize` function assumes that this case will never happen!
+<!-- I'm not sure this case can be deemed an under-approximation just because of that. -->
 Therefore, the stub we wrote cannot be considered a **sound model** of `serde_json::from_slice`, and it's dangerous to use it in our harnesses.
 
 We hope this convinces you about the risks of stubbing.
@@ -272,7 +273,7 @@ For functions and methods, the transformation boils down to replacing all calls 
 That said, the transformation can also be applied at different stages of the compilation step.
 As you may know, the Rust language uses multiple [Intermediate Representations](https://rustc-dev-guide.rust-lang.org/overview.html#intermediate-representations) (IRs) to represent and perform analyses on Rust programs.
 In total, we considered five approaches:
- - Conditional compilation
+ - Conditional compilation[^footnote-conditional]
  - Source-to-source transformation
  - AST-to-AST transformation
  - HIR-to-HIR transformation
