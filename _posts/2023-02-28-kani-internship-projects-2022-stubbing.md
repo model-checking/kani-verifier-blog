@@ -112,9 +112,12 @@ Kani verifies the assertion successfully, avoiding any issues that appear if we 
 
 ### Another example: stubbing `factorial`
 
-Let's see another example where we compute the [factorial](https://en.wikipedia.org/wiki/Factorial) of a number `n`.
-Note that the `factorial` function uses the method `checked_mul` to prevent overflow errors.
-We're interested in verifying the correctness of the `factorial` calculation.
+Let's see another example where we compute [binomial coefficients](https://en.wikipedia.org/wiki/Binomial_coefficient).
+This computation is often expressed as `n choose k` (implemented by `choose` in below),
+and it represents the number of ways to choose `k` elements from a set of `n` elements.
+In this example, we're interested in verifying the property `(n choose k) == (n choose (n - k))`.
+
+Note that `choose` makes use of a recursive `factorial` function that uses the method `checked_mul` to prevent overflow errors.
 
 ```rust
 fn factorial(n: u64) -> Option<u64> {
@@ -124,37 +127,30 @@ fn factorial(n: u64) -> Option<u64> {
     n.checked_mul(factorial(n - 1).unwrap())
 }
 
+fn choose(n: u64, k: u64) -> u64 {
+    let fact_n = factorial(n).unwrap();
+    let fact_k = factorial(k).unwrap();
+    let fact_n_minus_k = factorial(n - k).unwrap();
+    fact_n / (fact_k * fact_n_minus_k)
+}
+
 #[cfg(kani)]
 #[kani::proof]
-fn verify_factorial() {
+#[kani::unwind(22)]
+fn verify_choose() {
     let n = kani::any();
-    kani::assume(n > 0);
-    if let Some(value) = factorial(n) {
-        assert_eq!(value, n * factorial(n - 1).unwrap());
-    }
+    let k = kani::any();
+    kani::assume(n < 21);
+    kani::assume(k < 21);
+    kani::assume(n > k);
+    assert_eq!(choose(n, k), choose(n, n - k));
 }
 ```
 
-If we run this example through Kani, we'll see the following output:
+This example takes more than 15 minutes to verify on an [AWS EC2 `m5a.4xlarge` instance](https://aws.amazon.com/ec2/instance-types/).
+The code under verification shows bad performance due to the recursive definition of the `factorial` function.
 
-```
-Unwinding recursion factorial iteration 1
-Unwinding recursion factorial iteration 2
-Unwinding recursion factorial iteration 3
-Unwinding recursion factorial iteration 4
-Unwinding recursion factorial iteration 5
-Unwinding recursion factorial iteration 6
-Unwinding recursion factorial iteration 7
-Unwinding recursion factorial iteration 8
-Unwinding recursion factorial iteration 9
-Unwinding recursion factorial iteration 10
-# -- snip --
-```
-
-In this case, it doesn't look like Kani will terminate anytime soon due to the recursive definition of the `factorial` function.
-The code under verification shows bad performance because the underlying engine attempts to unwind all possible recursive calls.
-
-But we can avoid the recursion by pre-computing the values that fit into a `u64` value and replacing `factorial` with another function that gets those values.
+But we can avoid the recursion by pre-computing the values[^footnote-values] that fit into a `u64` value and replacing `factorial` with another function that gets those values.
 
 ```rust
 const FACT: [u64; 21] = [
@@ -188,6 +184,13 @@ fn factorial(n: u64) -> Option<u64> {
     n.checked_mul(factorial(n - 1).unwrap())
 }
 
+fn choose(n: u64, k: u64) -> u64 {
+    let fact_n = factorial(n).unwrap();
+    let fact_k = factorial(k).unwrap();
+    let fact_n_minus_k = factorial(n - k).unwrap();
+    fact_n / (fact_k * fact_n_minus_k)
+}
+
 #[cfg(kani)]
 fn stub_factorial(n_64: u64) -> Option<u64> {
     let n = n_64 as usize;
@@ -200,32 +203,33 @@ fn stub_factorial(n_64: u64) -> Option<u64> {
 
 #[cfg(kani)]
 #[kani::proof]
-#[kani::stub(factorial, stub_factorial)]
-fn verify_factorial() {
+#[kani::unwind(22)]
+fn verify_choose() {
     let n = kani::any();
-    kani::assume(n > 0);
-    if let Some(value) = factorial(n) {
-        assert_eq!(value, n * factorial(n - 1).unwrap());
-    }
+    let k = kani::any();
+    kani::assume(n > 0 && n < 21);
+    kani::assume(k > 0 && k < 21);
+    kani::assume(n > k);
+    assert_eq!(choose(n, k), choose(n, n - k));
 }
 ```
 
 Let's run this harness with Kani!
 
 ```bash
-cargo kani --enable-unstable --enable-stubbing --harness verify_factorial
+cargo kani --enable-unstable --enable-stubbing --harness verify_choose
 ```
 
 ```
 SUMMARY:
- ** 0 of 7 failed
+ ** 0 of 10 failed
 
 VERIFICATION:- SUCCESSFUL
-Verification Time: 0.22135049s
+Verification Time: 13.64521s
 ```
 
-Now Kani verifies the example successfully, and in less than 1 second!
-This time, Kani is able to complete the verification because our stub avoids recursion altogether.
+Now Kani verifies the example successfully, and in less 15 seconds!
+This time, Kani completes the verification faster because our stub avoids recursion altogether.
 
 ## Risks of Stubbing
 
@@ -273,8 +277,8 @@ Therefore, the stub we wrote cannot be considered a **sound model** of `serde_js
 
 We hope this convinces you about the risks of stubbing.
 Always keep in mind that stubs are essentially additional assumptions in your harnesses.
-Because of that, we recommend our users to avoid stubbing whenever they can.
-If there's no other option, then you can get more assurance by writing harnesses for your stubs.
+Because of that, we recommend our users to only use stubbing when necessary.
+Note that you can also write harnesses for your stubs if you need more assurance.
 
 ## Considered Designs
 
@@ -293,7 +297,7 @@ In total, we considered five approaches:
 
 In summary, we tried to answer the following question for each approach:
 
-> Does the approach allows to perform stubbing of local/external functions/methods/types?
+> Does the approach allow stubbing of local/external functions/methods/types?
 
 | | Conditional compilation | Source-to-source transformation | AST-to-AST transformation | HIR-to-HIR transformation | MIR-to-MIR transformation |
 | --- | --- | --- | --- | --- | --- |
@@ -315,7 +319,7 @@ The main downside is that they'd require modifications to the Rust compiler (to 
 Moreover, they'd introduce new issues while compiling dependencies[^footnote-alternatives].
 
 Therefore, **the approach we followed was the MIR-to-MIR transformation**.
-While it doesn't allow to stub types, the MIR-to-MIR approach presents many advantages:
+While it doesn't allow stubbing types, the MIR-to-MIR approach presents many advantages:
  * It operates over a relatively simple IR.
  * The Rust compiler already has good support for plugging in MIR-to-MIR transformations.
  * It's possible to integrate this transformation with [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html).
@@ -350,6 +354,9 @@ Unfortunately, functions contracts aren't available in Kani at the moment.
 [^footnote-limitation]: Another option is to supply an alternative implementation for verification using `#[cfg(kani)]`.
 In fact, this is considered the baseline approach for stubbing.
 Note, however, that this approach isn't valid for external code.
+
+[^footnote-values]: We only need to pre-compute 21 values because the factorial
+computation overflows for any value beyond 21.
 
 [^footnote-type-stubbing]: Type stubbing would be a powerful technique to have in Kani.
 It could allow us to provide verification-friendly stubs for frequently used types (e.g., `Vec`), among many other things.
