@@ -8,7 +8,7 @@ To learn more about Kani, check out [the Kani tutorial](https://model-checking.g
 
 Today we're continuing a series of posts on the internship projects carried out
 in our team during 2022. The Kani team is proud to be part of the AWS Automated
-Reasoning Group, which every year host a number of interns to work on
+Reasoning Group, which every year hosts a number of interns to work on
 automated-reasoning projects for tools like Kani. More details on AWS Automated
 Reasoning areas of work and available locations can be found [here](https://2023arinternships.splashthat.com/).
 If you're a Masters or PhD student interested in Automated Reasoning, please
@@ -40,7 +40,7 @@ Note that stubbing tries to solve a usability problem for Kani users by enabling
 
 To enable stubbing in the analysis, one must add the attribute `#[kani::stub(<function_name>, <stub_name>)]` to the harness function.
 In addition, Kani must be called with options `--enable-unstable --enable-stubbing --harness <harness_name>`.
-Note that stubbing only works for a single harness at the moment.
+Note that `--harness` is needed because the stubbing feature is limited to a single harness at the moment.
 
 ### An example: stubbing `rand::random`
 
@@ -181,6 +181,13 @@ const FACT: [u64; 21] = [
     2432902008176640000,
 ];
 
+fn factorial(n: u64) -> Option<u64> {
+    if n == 0 {
+        return Some(1);
+    }
+    n.checked_mul(factorial(n - 1).unwrap())
+}
+
 #[cfg(kani)]
 fn stub_factorial(n_64: u64) -> Option<u64> {
     let n = n_64 as usize;
@@ -203,7 +210,11 @@ fn verify_factorial() {
 }
 ```
 
-Let's run this in Kani!
+Let's run this harness with Kani!
+
+```bash
+cargo kani --enable-unstable --enable-stubbing --harness verify_factorial
+```
 
 ```
 SUMMARY:
@@ -214,11 +225,12 @@ Verification Time: 0.22135049s
 ```
 
 Now Kani verifies the example successfully, and in less than 1 second!
+This time, Kani is able to complete the verification because our stub avoids recursion altogether.
 
 ## Risks of Stubbing
 
 Stubbing is a feature that comes with great power and, as such, it should be used with caution.
-It's the developer's responsibility to ensure that a stub replacing another function soundly models its behavior.
+It's the developer's responsibility to **ensure that a stub replacing another function soundly models its behavior**.
 This is normally not the case in testing, where developers writing *mock-ups* tend to setup a concrete version of an object (an *under-approximation* of the model).
 
 For example, let's suppose you're attempting to stub a call to [`serde_json::from_slice`](https://docs.rs/serde_json/latest/serde_json/de/fn.from_slice.html) in your harness.
@@ -260,7 +272,7 @@ However, our `stub_deserialize` function assumes that this case will never happe
 Therefore, the stub we wrote cannot be considered a **sound model** of `serde_json::from_slice`, and it's dangerous to use it in our harnesses.
 
 We hope this convinces you about the risks of stubbing.
-Always keep in mind that stubs are essentially additional assumptions.
+Always keep in mind that stubs are essentially additional assumptions in your harnesses.
 Because of that, we recommend our users to avoid stubbing whenever they can.
 If there's no other option, then you can get more assurance by writing harnesses for your stubs.
 
@@ -281,7 +293,7 @@ In total, we considered five approaches:
 
 In summary, we tried to answer the following question for each approach:
 
-> Does the approach allows to perform stubbing of local/external functions/methods/types?*
+> Does the approach allows to perform stubbing of local/external functions/methods/types?
 
 | | Conditional compilation | Source-to-source transformation | AST-to-AST transformation | HIR-to-HIR transformation | MIR-to-MIR transformation |
 | --- | --- | --- | --- | --- | --- |
@@ -295,14 +307,14 @@ In summary, we tried to answer the following question for each approach:
 The main disadvantage of the conditional compilation approach is that it cannot be applied to external code.
 
 In a source-to-source transformation, we'd rewrite the source code before it gets to the compiler.
-This approach is the most flexible, allowing us to essentially stub any code (functions, methods, types).
+This approach is the most flexible, allowing us to basically stub any code (functions, methods, types).
 However, it requires all source code to be available, and in general it's difficult to work with (e.g., unexpanded macros).
 
 AST-to-AST and HIR-to-HIR transformations are close to the source code, so they're quite flexible too.
 The main downside is that they'd require modifications to the Rust compiler (to plug in new AST/HIR passes).
 Moreover, they'd introduce new issues while compiling dependencies[^footnote-alternatives].
 
-Therefore, we approach we followed was the MIR-to-MIR transformation.
+Therefore, **the approach we followed was the MIR-to-MIR transformation**.
 While it doesn't allow to stub types, the MIR-to-MIR approach presents many advantages:
  * It operates over a relatively simple IR.
  * The Rust compiler already has good support for plugging in MIR-to-MIR transformations.
@@ -343,7 +355,7 @@ Note, however, that this approach isn't valid for external code.
 It could allow us to provide verification-friendly stubs for frequently used types (e.g., `Vec`), among many other things.
 
 [^footnote-conditional]: Conditional compilation refers to making use of `#[cfg(kani)]` and `#[cfg(not(kani))]` to guard the code that's used for verification and standard compilation, respectively.
-Note that we could've used in [our first example](#an-example-stubbing-randrandom), by specifying `#[cfg(not(kani))]` for the `rand::random` call and `#[cfg(kani)]` for the `kani::any` call.
+Note that we could've used it in [our first example](#an-example-stubbing-randrandom), by specifying `#[cfg(not(kani))]` for the `rand::random` call and `#[cfg(kani)]` for the `kani::any` call.
 
 [^footnote-alternatives]: The advantages and disadvantages of these approaches are better explained in
 [this section of the RFC for function stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html#rationale-and-alternatives-stubbing-mechanism).
