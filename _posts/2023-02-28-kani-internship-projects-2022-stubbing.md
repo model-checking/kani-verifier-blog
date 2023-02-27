@@ -84,7 +84,7 @@ fn encrypt_then_decrypt_is_identity() {
 ```
 
 Here, the `#[kani::stub(rand::random, stub_random)]` attribute indicates to Kani that it should replace `rand::random` with the stub `stub_random`.
-Note that this is a sound assumption to do: `rand::random` is expected to return any `u32` value, just like `kani::any`.
+This is a sound replacement: the value returned by `kani::any` captures all possible `u32` values returned by `rand::random`.
 
 Now, let's run it through Kani:
 
