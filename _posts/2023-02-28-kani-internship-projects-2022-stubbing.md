@@ -209,7 +209,7 @@ fn verify_choose() {
     let k = kani::any();
     kani::assume(n > 0 && n < 21);
     kani::assume(k > 0 && k < 21);
-    kani::assume(n > k);
+    kani::assume(n >= k);
     assert_eq!(choose(n, k), choose(n, n - k));
 }
 ```
