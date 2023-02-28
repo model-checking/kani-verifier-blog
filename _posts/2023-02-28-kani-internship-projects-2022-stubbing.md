@@ -345,23 +345,16 @@ it'll improve Kani's usability in the future!
  1. [RFC for Function Stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html)
  2. [Documentation for Stubbing](https://model-checking.github.io/kani/reference/stubbing.html)
 
-[^footnote-contracts]: In this case, function contracts are a good alternative to stubbing.
-You can find a comparison to function contracts in
-[this section of the RFC for function stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html#comparison-to-function-contracts).
-Unfortunately, functions contracts aren't available in Kani at the moment.
+### Footnotes
 
-[^footnote-limitation]: Another option is to supply an alternative implementation for verification using `#[cfg(kani)]`.
-In fact, this is considered the baseline approach for stubbing.
-Note, however, that this approach isn't valid for external code.
+[^footnote-contracts]: In this case, function contracts are a good alternative to stubbing. You can find a comparison to function contracts in [this section of the RFC for function stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html#comparison-to-function-contracts). Unfortunately, functions contracts aren't available in Kani at the moment.
 
-[^footnote-values]: We only need to pre-compute 21 values because the factorial
-computation overflows for any value beyond 21.
+[^footnote-limitation]: Another option is to supply an alternative implementation for verification using `#[cfg(kani)]`. In fact, this is considered the baseline approach for stubbing. Note, however, that this approach isn't valid for external code.
 
-[^footnote-type-stubbing]: Type stubbing would be a powerful technique to have in Kani.
-It could allow us to provide verification-friendly stubs for frequently used types (e.g., `Vec`), among many other things.
+[^footnote-values]: We only need to pre-compute 21 values because the factorial computation overflows for any value beyond 21.
 
-[^footnote-conditional]: Conditional compilation refers to making use of `#[cfg(kani)]` and `#[cfg(not(kani))]` to guard the code that's used for verification and standard compilation, respectively.
-Note that we could've used it in [our first example](#an-example-stubbing-randrandom), by specifying `#[cfg(not(kani))]` for the `rand::random` call and `#[cfg(kani)]` for the `kani::any` call.
+[^footnote-type-stubbing]: Type stubbing would be a powerful technique to have in Kani. It could allow us to provide verification-friendly stubs for frequently used types (e.g., `Vec`), among many other things.
 
-[^footnote-alternatives]: The advantages and disadvantages of these approaches are better explained in
-[this section of the RFC for function stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html#rationale-and-alternatives-stubbing-mechanism).
+[^footnote-conditional]: Conditional compilation refers to making use of `#[cfg(kani)]` and `#[cfg(not(kani))]` to guard the code that's used for verification and standard compilation, respectively. Note that we could've used it in [our first example](#an-example-stubbing-randrandom), by specifying `#[cfg(not(kani))]` for the `rand::random` call and `#[cfg(kani)]` for the `kani::any` call.
+
+[^footnote-alternatives]: The advantages and disadvantages of these approaches are better explained in [this section of the RFC for function stubbing](https://model-checking.github.io/kani/rfc/rfcs/0002-function-stubbing.html#rationale-and-alternatives-stubbing-mechanism).
