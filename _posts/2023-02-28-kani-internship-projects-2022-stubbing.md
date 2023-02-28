@@ -142,7 +142,7 @@ fn verify_choose() {
     let k = kani::any();
     kani::assume(n < 21);
     kani::assume(k < 21);
-    kani::assume(n > k);
+    kani::assume(n >= k);
     assert_eq!(choose(n, k), choose(n, n - k));
 }
 ```
@@ -204,6 +204,7 @@ fn stub_factorial(n_64: u64) -> Option<u64> {
 #[cfg(kani)]
 #[kani::proof]
 #[kani::unwind(22)]
+#[kani::stub(factorial, stub_factorial)]
 fn verify_choose() {
     let n = kani::any();
     let k = kani::any();
