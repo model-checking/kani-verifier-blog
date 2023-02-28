@@ -272,7 +272,6 @@ In principle, this may look like an **over-approximation** because we generate a
 But actually, we're missing something:
 [`serde_json::Result<T>`](https://docs.rs/serde_json/latest/serde_json/type.Result.html) can also return a `serde_json::Error` if the deserialization fails.
 However, our `stub_deserialize` function assumes that this case will never happen!
-<!-- I'm not sure this case can be deemed an under-approximation just because of that. -->
 Therefore, the stub we wrote cannot be considered a **sound model** of `serde_json::from_slice`, and it's dangerous to use it in our harnesses.
 
 We hope this convinces you about the risks of stubbing.
