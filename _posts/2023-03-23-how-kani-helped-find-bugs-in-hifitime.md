@@ -18,9 +18,13 @@ On Earth, humans follow a local time, which is supposed to be relatively close t
 > Leap seconds pose tricky problems for software writers, and consequently there are concerns that these events put safety-critical systems at risk. The correct solution is for designers to base such systems on TAI or some other glitch-free time scale, not UTC, but this option is often overlooked until it is too late.
 > -- "SOFA Time Scales and Calendar Tools", Document version 1.61, section 3.5.1
 
+As seen in the figure below, the deviation of the UTC time scale compared to the other time scales increases over time. Moreover, the time between two corrections is not equally spaced. In other words, UTC is not a monotonic clock and attempting to use UTC over a leap second adjustment will cause problems.
+
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/utc-time-scale-drift.png" alt="UTC drifts with respect to other time scales" />
 
 Luckily there are a few glitch-free time scales to choose from. Hifitime uses TAI, the international atomic time. This allows quick synchronization with UTC time because both UTC and TAI "tick" at the same rate as they are both Earth based time scales. In fact, with general relativity, we understand that time is affected by gravity fields. This causes the additional problem that a second does not tick with the same frequency on Earth as it does in the vacuum between Mars and Jupiter (which is more than twice as far apart as Mars is from the Sun by the way). As such, the position of planets published by NASA JPL are provided in a time scale in which the influence of the gravity of Earth has been removed and where the "ticks" of one second are fixed at the solar system barycenter: the Dynamic Barycentric Time (TDB) time scale. As you may imagine, this causes lots of problems when converting from human time to any astronomical time.
+
+The figure below shows how the effect of gravity on the duration of a second compared to Earth based clocks, like TT (blue line fixed at 32.184 s) and TAI (reference Earth time, not shown since it would be a line at exactly zero).
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/tai-vs-et-vs-tdb.png" alt="TT is fixed to TAI but TDB and ET are periodic" />
 
