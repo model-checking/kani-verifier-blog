@@ -7,6 +7,10 @@ Hifitime is a scientifically accurate time management library that provides nano
 
 The purpose of this blog post is to show how Kani helped solve a number of important non-trivial bugs in hifitime. For completeness' sake, let's start with [an introduction of the notion of time](#why-time-matters), how hifitime [avoids loss of precision](#avoiding-loss-of-precision), and finally [why Kani is crucial](#importance-of-kani-in-hifitime) to ensuring the correctness of hifitime.
 
+## Author bio
+
+Chris Rabotin is a senior guidance, navigation, and controls (GNC) engineer at Rocket Lab USA. His day to day revolves around trajectory design and orbit determination of Moon-bounder missions, and developing GNC algorithms in C++ that run on spacecraft and lunar landers. On his free time, he architects and develops high fidelity astrodynamics software in Rust and Python ([Nyx Space](https://nyxspace.com/)) and focuses way too much on testing and validation of its results. Chris has over twenty years of experience in Python and picked up Rust in 2017 after encountering yet another memory overrun in a vector math library in C.
+
 ## Why time matters
 
 _Time is just counting subdivisions of the second, it's a trivial and solved problem._ Well, it's not quite trivial, and often incorrectly solved.
@@ -45,7 +49,38 @@ The purpose of hifitime is to convert between time scales, and these drift apart
 
 This is where Kani comes in very handy. From its definition, Durations have a minimum and maximum value. On an unsigned 64 bit integer, we can store enough nanoseconds for four full centuries and a bit (but less than five centuries worth of nanoseconds). We want to normalize all operations such that the nanosecond counter stays within one century, unless we've reached the maximum (or minimum) number of centuries in which case, we want those nanoseconds to continue counting until the `u64` bound is reached. Centuries are stored in a _signed_ 16 bit integer, and are the only field that stores whether the duration is positive or negative.
 
-At first sight, it seems like a relatively simple task to make sure that this math is correct. It turns out that handling edge cases near the min and max durations or when performing operations between very large and very small durations requires special attention. Kani has helped fix at least eight different categories of bugs in a single pull request: <https://github.com/nyx-space/hifitime/pull/192>. Most of these were bugs near the boundaries of a Duration definition: around the zero, maximum, and minimum durations. But many of the bugs were on important and common operations: partial equality, negation, addition, and subtraction operations. These bugs weren't due to lax testing: there are over 74 integration tests with plenty of checks within each.
+At first sight, it seems like a relatively simple task to make sure that this math is correct. It turns out that handling edge cases near the min and max durations or when performing operations between very large and very small durations requires special attention.
+
+With Kani, we can check for all permutations of a definition of a `Duration`, and ensure that the decomposition of a `Duration` into its parts of days, hours, minutes, seconds, milliseconds, microseconds, and nanoseconds, never causes any overflow, underflow, or general unsoundness. In hifitime, this is done simply by implementing `Arbitrary` for `Duration`, and calling the `decompose()` function on _any_ duration. This tests is beautiful in its simplicity: small code footprint for mighty guarantees, such could be the motto of Kani!
+
+```rust
+#[cfg(kani)]
+impl Arbitrary for Duration {
+    #[inline(always)]
+    fn any() -> Self {
+        let centuries: i16 = kani::any();
+        let nanoseconds: u64 = kani::any();
+
+        Duration::from_parts(centuries, nanoseconds)
+    }
+}
+
+// (...)
+
+#[cfg(kani)]
+#[kani::proof]
+fn formal_duration_normalize_any() {
+    let dur: Duration = kani::any();
+    // Check that decompose never fails
+    dur.decompose();
+}
+```
+
+In the test above, if the call to `decompose` ever causes any overflow, underflow, division by zero, etc. then Kani will report an error and the exact value and bits inputted that caused the problem. This feedback is great, because one can just plugin those values into another test and debug it precisely. One will note that this test does not actually check the output value. That's for two reasons. First, testing values for all possible combinations would require re-implementing the same code that is in the `decompose` function making the test a tautology. Second, the purpose of the Hifitime Kani tests is to ensure that the aren't any unsound operations. Moreover, Hifitime has plenty of values that are explicitly tested for in the rest the tests.
+
+## Conclusion
+
+Kani has helped fix at least eight different categories of bugs in a single pull request: <https://github.com/nyx-space/hifitime/pull/192>. Most of these were bugs near the boundaries of a Duration definition: around the zero, maximum, and minimum durations. But many of the bugs were on important and common operations: partial equality, negation, addition, and subtraction operations. These bugs weren't due to lax testing: there are over 74 integration tests with plenty of checks within each.
 
 One of the great features of Kani is that it performs what is known as symbolic execution of programs, where inputs are modelled as symbolic variables covering whole ranges of values at once. All program behaviors possible under these inputs are analyzed for defects like arithmetic overflows or underflows, signed conversion overflow or underflow, etc.. If a defect is possible for some values of the inputs, Kani will generate a counter example trace with concrete values triggering the defect.
 
