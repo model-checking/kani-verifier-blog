@@ -76,7 +76,7 @@ fn formal_duration_normalize_any() {
 }
 ```
 
-In the test above, if the call to `decompose` ever causes any overflow, underflow, division by zero, etc. then Kani will report an error and the exact value and bits inputted that caused the problem. This feedback is great, because one can just plugin those values into another test and debug it precisely. One will note that this test does not actually check the output value. That's for two reasons. First, testing values for all possible combinations would require re-implementing the same code that is in the `decompose` function making the test a tautology. Second, the purpose of the Hifitime Kani tests is to ensure that the aren't any unsound operations. Moreover, Hifitime has plenty of values that are explicitly tested for in the rest the tests.
+In the test above, if the call to `decompose` ever causes any overflow, underflow, division by zero, etc. then Kani will report an error and the exact value and bits inputted that caused the problem. This feedback is great, because one can just plugin those values into another test and debug it precisely. One will note that this test does not actually check the output value. That's for two reasons. First, testing values would require developing either a formal specification or an independent implementation of the `decompose` function against which to check. Both options require quite a bit of effort, and the `decompose` function is really only used for displaying a duration in a human-readable format. Second, the purpose of the Hifitime Kani tests is to ensure that the aren't any unsound operations. Finally, Hifitime has plenty of values that are explicitly tested for in the rest the tests.
 
 ## Conclusion
 
