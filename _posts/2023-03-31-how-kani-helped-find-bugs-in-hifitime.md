@@ -83,6 +83,50 @@ fn formal_duration_normalize_any() {
 
 In the test above, if the call to `decompose` ever causes any overflow, underflow, division by zero, etc. then Kani will report an error and the exact value and bits inputted that caused the problem. This feedback is great, because one can just plugin those values into another test and debug it precisely. One will note that this test does not actually check the output value. That's for two reasons. First, testing values would require developing either a formal specification or an independent implementation of the `decompose` function against which to check. Both options require quite a bit of effort, and the `decompose` function is really only used for displaying a duration in a human-readable format. Second, the purpose of the Hifitime Kani tests is to ensure that the aren't any unsound operations. Finally, Hifitime has plenty of values that are explicitly tested for in the rest the tests.
 
+### Example of bug found with Kani
+
+In a previous version of Hifitime ([5f3a5bb...](https://github.com/nyx-space/hifitime/blob/5f3a5bb06172a5d7eee98530543ac18036126af2/src/duration.rs#L285)), the `normalize` function would add two 64-bit unsigned integers to determine whether the duration being normalized would saturate to the `MIN` or `MAX`. Hifitime ensures that huge or tiny durations are saturated and don't overflow. The exact erroneous code was as follows, and initially looks like it should be correct since we compute the remainder of the division by the number of nanoseconds in a century before adding it to the number of nanoseconds:
+
+```rust
+let rem_nanos = self.nanoseconds.rem_euclid(NANOSECONDS_PER_CENTURY);
+
+if self.centuries == i16::MIN {
+    if rem_nanos + self.nanoseconds > Self::MIN.nanoseconds {
+        // We're at the min number of centuries already, and we have extra nanos, so we're saturated the duration limit
+        *self = Self::MIN;
+    }
+    // Else, we're near the MIN but we're within the MIN in nanoseconds, so let's not do anything here.
+} // ...
+```
+
+With that code, Kani found a counter example via the `formal_normalize_any` test that triggered an overflow when the number of centuries was set to its absolute minimum and the number of nanoseconds was zero. In fact, if the number of centuries is minimized, Duration allows incrementing the number of nanoseconds until the maximum 64-bit unsigned integer (this allows Duration to cover a large time span). The report clearly displayed the input values that caused the overflow, and the exact line where the overflow(s) occurred.
+
++ File src/duration.rs
+    + Function duration::Duration::normalize
+        + Line 285: [trace] attempt to add with overflow
+        + Line 291: [trace] attempt to add with overflow
+
+```
+(...)
+Step 8962: Function MISSING, File MISSING, Line 0
+extra_centuries = 5ul (00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000101)
+Step 8963: Function MISSING, File MISSING, Line 0
+-> core::num::<impl u64>::rem_euclid
+Step 8964: Function MISSING, File MISSING, Line 0
+self = 17480859535802999432ul (11110010 10011000 01111101 00100001 01011000 00001001 10100010 10001000)
+Step 8965: Function MISSING, File MISSING, Line 0
+rhs = 3155760000000000000ul (00101011 11001011 10000011 00000000 00000100 01100011 00000000 00000000)
+Step 8966: Function MISSING, File MISSING, Line 0
+<- core::num::<impl u64>::rem_euclid
+Step 8967: Function MISSING, File MISSING, Line 0
+rem_nanos = 1702059535802999432ul (00010111 10011110 11101110 00100001 01000010 00011010 10100010 10001000)
+Step 8968: Function duration::Duration::normalize, File src/duration.rs, Line 285
+if rem_nanos + self.nanoseconds > Self::MIN.nanoseconds { // We're at the min number of centuries already, and we have extra nanos, so we're saturated the duration limit *self = Self::MIN;
+failure: duration::Duration::normalize.assertion.1: attempt to add with overflow
+```
+
+Now, the [`normalize`](https://github.com/nyx-space/hifitime/blob/ef3777b7270898b9de1644e123917ed338e2126a/src/duration.rs#L287) function is not only simpler but also correct.
+
 ## Conclusion
 
 Kani has helped fix at least eight different categories of bugs in a single pull request: <https://github.com/nyx-space/hifitime/pull/192>. Most of these were bugs near the boundaries of a Duration definition: around the zero, maximum, and minimum durations. But many of the bugs were on important and common operations: partial equality, negation, addition, and subtraction operations. These bugs weren't due to lax testing: there are over 74 integration tests with plenty of checks within each.
