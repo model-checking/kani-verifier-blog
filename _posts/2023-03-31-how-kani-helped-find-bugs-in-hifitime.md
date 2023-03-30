@@ -3,13 +3,18 @@ layout: post
 title: "How Kani helped find bugs in Hifitime"
 ---
 
+[Kani](https://github.com/model-checking/kani) is a verification tool
+that can help you systematically test properties about your Rust code.
+To learn more about Kani, check out [the Kani
+tutorial](https://model-checking.github.io/kani/kani-tutorial.html)
+and our [previous blog
+posts](https://model-checking.github.io/kani-verifier-blog/).
+
 [Hifitime](https://docs.rs/hifitime/latest/hifitime/) is a scientifically accurate time management library that provides nanosecond precision of durations and time computations for 65 thousand centuries in most time scales (also called time systems). It is useful wherever a monotonic clock is needed, even in the presence of leap second or remote time corrections (like for Network Time Protocol or Precise Time Protocol). It is suitable for desktop applications and for embedded systems without a floating point unit (FPU). It also supports the typical features of date time management libraries, like the [formatting and parsing of date times](https://docs.rs/hifitime/latest/hifitime/efmt/format/struct.Format.html) in a `no-std` environment using the typical C89 tokens, or a [human friendly approximation](https://docs.rs/hifitime/latest/hifitime/prelude/struct.Duration.html#method.approx) of the difference between dates. For scientific and engineering applications, it is mostly tailored to astronomy (with the inclusion of the UT1 time scale), astrodynamics (with the ET and TDB time scales), and global navigation satellite systems (with the GPS, Galileo, and BeiDou time scales).
 
 The purpose of this blog post is to show how Kani helped solve a number of important non-trivial bugs in hifitime. For completeness' sake, let's start with [an introduction of the notion of time](#why-time-matters), how hifitime [avoids loss of precision](#avoiding-loss-of-precision), and finally [why Kani is crucial](#importance-of-kani-in-hifitime) to ensuring the correctness of hifitime.
 
-## Author bio
-
-Chris Rabotin is a senior guidance, navigation, and controls (GNC) engineer at Rocket Lab USA. His day to day revolves around trajectory design and orbit determination of Moon-bounder missions, and developing GNC algorithms in C++ that run on spacecraft and lunar landers. On his free time, he architects and develops high fidelity astrodynamics software in Rust and Python ([Nyx Space](https://nyxspace.com/)) and focuses way too much on testing and validation of its results. Chris has over twenty years of experience in Python and picked up Rust in 2017 after encountering yet another memory overrun in a vector math library in C.
+This is our first blog post from an external contributor. We are very excited for this contribution and thank [Christopher Rabotin](#author-bio) for his time, interest, and copacetic use of Kani. 
 
 ## Why time matters
 
@@ -91,3 +96,7 @@ Kani can also test code where there is no explicit condition to check. Instead, 
 Tests without explicit post-conditions effectively ensure that sanity of the operations in a given function call. Explicit tests provide the same while also checking for conditions after the calls. If either of these tests fail, Kani can provide a test failure report outlining the sequence of operations, and the binary representation of each intermediate operation, to help the developer gain an understanding of why their implementation is incorrect.
 
 The overhead to implement tests in Kani is very low, and the benefits are immense. Hifitime has only eleven Kani tests, but that covers all of the core functionality. Basically, write a Kani verification like a unit test, add some assumptions on the values if desired, run the model verifier, and you've formally verified this part of the code. Amazing!
+
+## Author bio
+
+Chris Rabotin is a senior guidance, navigation, and controls (GNC) engineer at Rocket Lab USA. His day to day revolves around trajectory design and orbit determination of Moon-bounder missions, and developing GNC algorithms in C++ that run on spacecraft and lunar landers. On his free time, he architects and develops high fidelity astrodynamics software in Rust and Python ([Nyx Space](https://nyxspace.com/)) and focuses way too much on testing and validation of its results. Chris has over twenty years of experience in Python and picked up Rust in 2017 after encountering yet another memory overrun in a vector math library in C.
