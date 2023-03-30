@@ -51,7 +51,7 @@ This is where Kani comes in very handy. From its definition, Durations have a mi
 
 At first sight, it seems like a relatively simple task to make sure that this math is correct. It turns out that handling edge cases near the min and max durations, or when performing operations between very large and very small durations requires special attention, or even when crossing the boundary of the reference epoch. For example, the TAI reference epoch is 01 January 1900, so when subtracting one nanosecond from 01 January 1900 at midnight, the internal duration representation goes from `centuries: 0, nanoseconds: 0` to `centuries: -1, nanoseconds: 3_155_759_999_999_999_999`, as there are `3155759999999999999 + 1 = 3155760000000000000` nanoseconds in one century.
 
-With Kani, we can check for all permutations of a definition of a `Duration`, and ensure that the decomposition of a `Duration` into its parts of days, hours, minutes, seconds, milliseconds, microseconds, and nanoseconds, never causes any overflow, underflow, or general unsoundness. In hifitime, this is done simply by implementing `Arbitrary` for `Duration`, and calling the `decompose()` function on _any_ duration. This tests is beautiful in its simplicity: small code footprint for mighty guarantees, such could be the motto of Kani!
+With Kani, we can check for all permutations of a definition of a `Duration`, and ensure that the decomposition of a `Duration` into its parts of days, hours, minutes, seconds, milliseconds, microseconds, and nanoseconds, never causes any overflow, underflow, or other undefined behaviors. In hifitime, this is done simply by implementing `Arbitrary` for `Duration`, and calling the `decompose()` function on _any_ duration. This test is beautiful in its simplicity: small code footprint for mighty guarantees, such could be the motto of Kani!
 
 ```rust
 #[cfg(kani)]
@@ -84,20 +84,9 @@ Kani has helped fix at least eight different categories of bugs in a single pull
 
 One of the great features of Kani is that it performs what is known as symbolic execution of programs, where inputs are modelled as symbolic variables covering whole ranges of values at once. All program behaviors possible under these inputs are analyzed for defects like arithmetic overflows or underflows, signed conversion overflow or underflow, etc. If a defect is possible for some values of the inputs, Kani will generate a counter example trace with concrete values triggering the defect.
 
-
 Thanks to how Kani analyzes a program, tests can either have explicit post-conditions or not. A test with explicit post-conditions includes an assertion: execute a set of instructions and then check something. This is a typical test case.
 
 Kani can also test code where there is no explicit condition to check. Instead, only the successive operations of a function call are executed, and each are tested by Kani for failure cases by analyzing the inputs and finding cases where inputs will lead to runtime errors like overflows. This approach is how most of the bugs in hifitime have been found.
-
-```rust
-#[cfg(kani)]
-#[kani::proof]
-fn formal_duration_normalize_any() {
-    let dur: Duration = kani::any();
-    // Check that decompose never fails
-    dur.decompose();
-}
-```
 
 Tests without explicit post-conditions effectively ensure that sanity of the operations in a given function call. Explicit tests provide the same while also checking for conditions after the calls. If either of these tests fail, Kani can provide a test failure report outlining the sequence of operations, and the binary representation of each intermediate operation, to help the developer gain an understanding of why their implementation is incorrect.
 
