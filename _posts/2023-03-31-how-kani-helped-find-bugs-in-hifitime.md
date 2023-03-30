@@ -95,7 +95,12 @@ Kani can also test code where there is no explicit condition to check. Instead, 
 
 Tests without explicit post-conditions effectively ensure that sanity of the operations in a given function call. Explicit tests provide the same while also checking for conditions after the calls. If either of these tests fail, Kani can provide a test failure report outlining the sequence of operations, and the binary representation of each intermediate operation, to help the developer gain an understanding of why their implementation is incorrect.
 
-The overhead to implement tests in Kani is very low, and the benefits are immense. Hifitime has only eleven Kani tests, but that covers all of the core functionality. Basically, write a Kani verification like a unit test, add some assumptions on the values if desired, run the model verifier, and you've formally verified this part of the code. Amazing!
+The overhead to implement tests in Kani is very low, and the benefits
+are immense. Hifitime has only eleven Kani tests, but that covers all
+of the core functionality. Basically, write a Kani verification like a
+unit test, add some assumptions on the values if desired, run the
+model verifier, and you've formally verified this part of the code
+(given the assumptions). Amazing!
 
 ## Author bio
 
