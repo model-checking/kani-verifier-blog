@@ -15,7 +15,7 @@ Chris Rabotin is a senior guidance, navigation, and controls (GNC) engineer at R
 
 _Time is just counting subdivisions of the second, it's a trivial and solved problem._ Well, it's not quite trivial, and often incorrectly solved.
 
-As explained in "Beyond Measure" by James Vincent, measuring the passing of time has been important for societies for millennia. From using the flow of the Nile River to measure the passage of a year, to tracking the position of the Sun in the sky to delimit the start and end of a day, the definition of the time has changed quite a bit. 
+As explained in ["Beyond Measure" by James Vincent](https://bookshop.org/p/books/beyond-measure-the-hidden-history-of-measurement-from-cubits-to-quantum-constants-james-vincent/18124818), measuring the passing of time has been important for societies for millennia. From using the flow of the Nile River to measure the passage of a year, to tracking the position of the Sun in the sky to delimit the start and end of a day, the definition of the time has changed quite a bit. 
 
 On Earth, humans follow a local time, which is supposed to be relatively close to the idea that noon is when the Sun is at its height in the sky for the day. We've also decided that the divisions of time must be fixed: for example, an hour lasts 3600 seconds regardless of whether it's 1 am or 2 pm. If we only follow this fixed definition of an hour, then time drifts because the Earth does not in fact complete a full rotation on itself in _exactly_ 24 hours (nor in one sidereal day of 23 hours 56 minutes and 4.091 seconds, which is also an approximation of the UT1 time scale). For "human time" (Universal Coordinated Time, `UTC`) to catch up with the time with respect to the stars (`UT1`), we regularly introduce "leap seconds." Like leap years, where we introduce an extra day every fourth year (with rare exceptions), leap seconds introduce an extra second _every so often_, as [announced by the IERS](https://www.ietf.org/timezones/data/leap-seconds.list). When scientists report to the IERS that the Earth is about to drift quite a bit compared to `UTC`, IERS announces that on a given day at least six months in the future, there will be an extra second in that day to allow for the rotation of the Earth to catch up. In practice, this typically means that UTC clocks "stop the counting of time" for one second. In other words, UTC is _not_ a continuous time scale: that second we didn't count in UTC still happened for the universe! As the Standards Of Fundamental Astronomy (SOFA) eloquently puts it:
 
@@ -47,7 +47,7 @@ SOFA solves this by using a tuple of double precision floating point values for 
 
 The purpose of hifitime is to convert between time scales, and these drift apart from each other. Time scales are only used for scientific computations, so it's important to correctly compute the conversion between these time scales. As previously noted, to ensure exactly one nanosecond precision, hifitime stores durations as a tuple of integers, as these aren't affected by successive rounding errors. The drawback of this approach is that we have to rewrite the arithmetics of durations on this (centuries, nanosecond) encoding and guarantee it satisfies expected properties.
 
-This is where Kani comes in very handy. From its definition, Durations have a minimum and maximum value. On an unsigned 64 bit integer, we can store enough nanoseconds for four full centuries and a bit (but less than five centuries worth of nanoseconds). We want to normalize all operations such that the nanosecond counter stays within one century, unless we've reached the maximum (or minimum) number of centuries in which case, we want those nanoseconds to continue counting until the `u64` bound is reached. Centuries are stored in a _signed_ 16 bit integer, and are the only field that stores whether the duration is positive or negative.
+This is where Kani comes in very handy. From its definition, Durations have a minimum and maximum value. On an unsigned 64-bit integer, we can store enough nanoseconds for four full centuries and a bit (but less than five centuries worth of nanoseconds). We want to normalize all operations such that the nanosecond counter stays within one century, unless we've reached the maximum (or minimum) number of centuries in which case, we want those nanoseconds to continue counting until the `u64` bound is reached. Centuries are stored in a _signed_ 16-bit integer, and are the only field that stores whether the duration is positive or negative.
 
 At first sight, it seems like a relatively simple task to make sure that this math is correct. It turns out that handling edge cases near the min and max durations, or when performing operations between very large and very small durations requires special attention, or even when crossing the boundary of the reference epoch. For example, the TAI reference epoch is 01 January 1900, so when subtracting one nanosecond from 01 January 1900 at midnight, the internal duration representation goes from `centuries: 0, nanoseconds: 0` to `centuries: -1, nanoseconds: 3_155_759_999_999_999_999`, as there are `3155759999999999999 + 1 = 3155760000000000000` nanoseconds in one century.
 
@@ -89,6 +89,16 @@ Thanks to how Kani analyzes a program, tests can either have explicit post-condi
 
 Kani can also test code where there is no explicit condition to check. Instead, only the successive operations of a function call are executed, and each are tested by Kani for failure cases by analyzing the inputs and finding cases where inputs will lead to runtime errors like overflows. This approach is how most of the bugs in hifitime have been found.
 
+```rust
+#[cfg(kani)]
+#[kani::proof]
+fn formal_duration_normalize_any() {
+    let dur: Duration = kani::any();
+    // Check that decompose never fails
+    dur.decompose();
+}
+```
+
 Tests without explicit post-conditions effectively ensure that sanity of the operations in a given function call. Explicit tests provide the same while also checking for conditions after the calls. If either of these tests fail, Kani can provide a test failure report outlining the sequence of operations, and the binary representation of each intermediate operation, to help the developer gain an understanding of why their implementation is incorrect.
 
-The overhead to implement tests in Kani is very low, and the benefits are immense. Hifitime has only eleven Kani tests, but that covers all of the core functionality. Basically, write a Kani verification like a unit test, run the model verifier, and you've formally verified this part of the code. Amazing!
+The overhead to implement tests in Kani is very low, and the benefits are immense. Hifitime has only eleven Kani tests, but that covers all of the core functionality. Basically, write a Kani verification like a unit test, add some assumptions on the values if desired, run the model verifier, and you've formally verified this part of the code. Amazing!
