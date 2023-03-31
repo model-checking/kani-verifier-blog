@@ -52,11 +52,11 @@ SOFA solves this by using a tuple of double precision floating point values for 
 
 The purpose of hifitime is to convert between time scales, and these drift apart from each other. Time scales are only used for scientific computations, so it's important to correctly compute the conversion between these time scales. As previously noted, to ensure exactly one nanosecond precision, hifitime stores durations as a tuple of integers, as these aren't affected by successive rounding errors. The drawback of this approach is that we have to rewrite the arithmetics of durations on this (centuries, nanosecond) encoding and guarantee it satisfies expected properties.
 
-This is where Kani comes in very handy. From its definition, Durations have a minimum and maximum value. On an unsigned 64-bit integer, we can store enough nanoseconds for four full centuries and a bit (but less than five centuries worth of nanoseconds). We want to normalize all operations such that the nanosecond counter stays within one century, unless we've reached the maximum (or minimum) number of centuries in which case, we want those nanoseconds to continue counting until the `u64` bound is reached. Centuries are stored in a _signed_ 16-bit integer, and are the only field that stores whether the duration is positive or negative.
+This is where Kani comes in very handy. From its definition, `Duration`s have a minimum and maximum value. On an unsigned 64-bit integer, we can store enough nanoseconds for four full centuries and a bit (but less than five centuries worth of nanoseconds). We want to normalize all operations such that the nanosecond counter stays within one century, unless we've reached the maximum (or minimum) number of centuries in which case, we want those nanoseconds to continue counting until the `u64` bound is reached. Centuries are stored in a _signed_ 16-bit integer, and are the only field that stores whether the duration is positive or negative.
 
 At first sight, it seems like a relatively simple task to make sure that this math is correct. It turns out that handling edge cases near the min and max durations, or when performing operations between very large and very small durations requires special attention, or even when crossing the boundary of the reference epoch. For example, the TAI reference epoch is 01 January 1900, so when subtracting one nanosecond from 01 January 1900 at midnight, the internal duration representation goes from `centuries: 0, nanoseconds: 0` to `centuries: -1, nanoseconds: 3_155_759_999_999_999_999`, as there are `3155759999999999999 + 1 = 3155760000000000000` nanoseconds in one century.
 
-With Kani, we can check for all permutations of a definition of a `Duration`, and ensure that the decomposition of a `Duration` into its parts of days, hours, minutes, seconds, milliseconds, microseconds, and nanoseconds, never causes any overflow, underflow, or other undefined behaviors. In hifitime, this is done simply by implementing `Arbitrary` for `Duration`, and calling the `decompose()` function on _any_ duration. This test is beautiful in its simplicity: small code footprint for mighty guarantees, such could be the motto of Kani!
+With Kani, we can check for all permutations of a definition of a `Duration`, and ensure that the decomposition of a `Duration` into its parts of days, hours, minutes, seconds, milliseconds, microseconds, and nanoseconds, never causes any overflow, underflow, or other unexpected behaviors. In hifitime, this is done simply by implementing `Arbitrary` for `Duration`, and calling the `decompose()` function on _any_ duration. This test is beautiful in its simplicity: small code footprint for mighty guarantees, such could be the motto of Kani!
 
 ```rust
 #[cfg(kani)]
@@ -85,7 +85,7 @@ In the test above, if the call to `decompose` ever causes any overflow, underflo
 
 ### Example of bug found with Kani
 
-In a previous version of Hifitime ([5f3a5bb...](https://github.com/nyx-space/hifitime/blob/5f3a5bb06172a5d7eee98530543ac18036126af2/src/duration.rs#L285)), the `normalize` function would add two 64-bit unsigned integers to determine whether the duration being normalized would saturate to the `MIN` or `MAX`. Hifitime ensures that huge or tiny durations are saturated and don't overflow. The exact erroneous code was as follows, and initially looks like it should be correct since we compute the remainder of the division by the number of nanoseconds in a century before adding it to the number of nanoseconds:
+In a [previous version of Hifitime](https://github.com/nyx-space/hifitime/blob/5f3a5bb06172a5d7eee98530543ac18036126af2/src/duration.rs#L285), the `normalize` function would add two 64-bit unsigned integers to determine whether the duration being normalized would saturate to the `MIN` or `MAX`. Hifitime ensures that huge or tiny durations are saturated and don't overflow. The exact erroneous code was as follows, and initially looks like it should be correct since we compute the remainder of the division by the number of nanoseconds in a century before adding it to the number of nanoseconds:
 
 ```rust
 let rem_nanos = self.nanoseconds.rem_euclid(NANOSECONDS_PER_CENTURY);
@@ -99,7 +99,7 @@ if self.centuries == i16::MIN {
 } // ...
 ```
 
-With that code, Kani found a counter example via the `formal_normalize_any` test that triggered an overflow when the number of centuries was set to its absolute minimum and the number of nanoseconds was zero. In fact, if the number of centuries is minimized, Duration allows incrementing the number of nanoseconds until the maximum 64-bit unsigned integer (this allows Duration to cover a large time span). The report clearly displayed the input values that caused the overflow, and the exact line where the overflow(s) occurred.
+With that code, Kani found a counter example via the `formal_normalize_any` test that triggered an overflow when the number of centuries was set to its absolute minimum and the number of nanoseconds was zero. In fact, if the number of centuries is minimized, `Duration` allows incrementing the number of nanoseconds until the maximum 64-bit unsigned integer (this allows `Duration` to cover a large time span). The report clearly displayed the input values that caused the overflow, and the exact line where the overflow(s) occurred.
 
 + File src/duration.rs
     + Function duration::Duration::normalize
@@ -129,7 +129,7 @@ Now, the [`normalize`](https://github.com/nyx-space/hifitime/blob/ef3777b7270898
 
 ## Conclusion
 
-Kani has helped fix at least eight different categories of bugs in a single pull request: <https://github.com/nyx-space/hifitime/pull/192>. Most of these were bugs near the boundaries of a Duration definition: around the zero, maximum, and minimum durations. But many of the bugs were on important and common operations: partial equality, negation, addition, and subtraction operations. These bugs weren't due to lax testing: there are over 74 integration tests with plenty of checks within each.
+Kani has helped fix at least eight different categories of bugs in a single pull request: <https://github.com/nyx-space/hifitime/pull/192>. Most of these were bugs near the boundaries of a `Duration` definition: around the zero, maximum, and minimum durations. But many of the bugs were on important and common operations: partial equality, negation, addition, and subtraction operations. These bugs weren't due to lax testing: there are over 74 integration tests with plenty of checks within each.
 
 One of the great features of Kani is that it performs what is known as symbolic execution of programs, where inputs are modelled as symbolic variables covering whole ranges of values at once. All program behaviors possible under these inputs are analyzed for defects like arithmetic overflows or underflows, signed conversion overflow or underflow, etc. If a defect is possible for some values of the inputs, Kani will generate a counter example trace with concrete values triggering the defect.
 
@@ -148,4 +148,5 @@ model verifier, and you've formally verified this part of the code
 
 ## Author bio
 
-Chris Rabotin is a senior guidance, navigation, and controls (GNC) engineer at Rocket Lab USA. His day to day revolves around trajectory design and orbit determination of Moon-bounder missions, and developing GNC algorithms in C++ that run on spacecraft and lunar landers. On his free time, he architects and develops high fidelity astrodynamics software in Rust and Python ([Nyx Space](https://nyxspace.com/)) and focuses way too much on testing and validation of its results. Chris has over twenty years of experience in Python and picked up Rust in 2017 after encountering yet another memory overrun in a vector math library in C.
+[Chris Rabotin](https://chrisrabotin.me/) is a senior guidance, navigation, and controls (GNC) engineer at Rocket Lab USA.
+His day to day revolves around trajectory design and orbit determination of Moon-bounder missions, and developing GNC algorithms in C++ that run on spacecraft and lunar landers. On his free time, he architects and develops high fidelity astrodynamics software in Rust and Python ([Nyx Space](https://nyxspace.com/)) and focuses way too much on testing and validation of its results. Chris has over twenty years of experience in Python and picked up Rust in 2017 after encountering yet another memory overrun in a vector math library in C.
