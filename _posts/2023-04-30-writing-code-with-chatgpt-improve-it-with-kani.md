@@ -10,26 +10,24 @@ To learn more about Kani, check out [the Kani tutorial](https://model-checking.g
 Recently, [ChatGPT](https://openai.com/blog/chatgpt)---OpenAI’s AI chatbot built on top of Large Language Models (LLMs)---has taken the world by storm.
 People are using ChatGPT to write blog posts, do homework, and even write code!
 That’s right: LLMs like ChatGPT can be used to write code, since code is essentially just another kind of text.
-All you need to do is provide a text prompt describing the program you want, and it will generate the code for you, along with an explanation of what it does.
+All you need to do is provide a text prompt describing the program you want, and it will generate the code for you, along with an explanation.
 
 We were also eager to explore the possibilities of using LLMs for daily coding tasks, so we decided to put ChatGPT to the test.
 In this blog post, we'll share our experiences with using ChatGPT and Kani to solve example coding problems, and explore how these technologies could revolutionize the way we approach software development.
 The experiments we did include the following three tasks:
 1. Writing a prompt and generate *unverified* code with ChatGPT.
 2. Checking the generated code with Kani to see if it's correct.
-3. Using both ChatGPT and Kani to generate verified code.
+3. Using ChatGPT and Kani iteratively to converge to code that passes verification.
 
 
-Our experiments showed that, while ChatGPT is easy to use and can efficiently generate code from text description, the generated code is often unsound.
+Our experiments show that, while ChatGPT is easy to use and can efficiently generate code from text description, the generated code does not always do what it is supposed to do.
 This is where verification tools like Kani can help detect bugs, corner cases and unexpected behavior in the generated code, thereby helping users of ChatGPT write more proven code.
 
 ## Code Generation using ChatGPT
-We demonstrate the three tasks with two examples.
-Let's start our first task: can we write code using a prompt with ChatGPT?
+We demonstrate the three tasks with a toy problem of writing a Rust function to compute the average of two integers.
 
-#### Example 1.a
-The first example is a toy problem of writing a Rust function to compute the average of two integers.
-So the prompt is also very simple and straightforward.
+Let's start our first task: writing code using a prompt with ChatGPT.
+For the toy problem, the prompt is also very simple and straightforward.
 
 ```
 Q: Can you write me a Rust function that computes the integer average of two integers?
@@ -47,7 +45,7 @@ fn integer_average(a: i32, b: i32) -> i32 {
 >In this function, we define a function called integer_average that takes two integer arguments a and b.
 The function then adds the two arguments together and divides the result by 2 to compute the integer average.
 
-, and even a driver function to call the average function.
+, and even a driver function to call and test the average function.
 
 ```rust
 fn main() {
@@ -58,9 +56,144 @@ fn main() {
 }
 ```
 
-#### Example 2.a
-The second example we tried is more like a real-world coding task.
+From the example, ChatGPT's code generation capabilities are thoroughly impressive.
+Not only does it produce code that looks good at first glance, but it also provides explanations that give us greater confidence that the code is doing exactly what we intended it to do.
+In fact, we can even request ChatGPT to generate a driver function and some test cases using follow-up prompts to further test the generated code.
+However, as verification folks, we know that we still can't be completely sure that the code is correct without **verification**.
+
+
+## Verification of Generated Code
+So, naturally, our next task is: verifying the generated programs with Kani.
+That is, we want to run Kani on the generated function `integer_average` to see if there is any bug in it.
+
+We can simply transform the driver function into a harness by substituting the test cases with `kani::any()`.
+
+``` rust
+fn integer_average(a: i32, b: i32) -> i32 {
+    (a + b) / 2     // <------ line 2
+}
+
+#[kani::proof]
+fn main() {
+    let a = kani::any();
+    let b = kani::any();
+    let result = integer_average(a, b);
+    println!("The average of {} and {} is {}", a, b, result);
+}
+```
+
+This harness verifies that, for any `i32` integers `a` and `b`, the function `integer_average` cannot trigger any of [bad behaviors that Kani checks for](https://model-checking.github.io/kani/tutorial-kinds-of-failure.html).
+
+We ran Kani on the above program
+
+```console
+> kani integer_average.rs
+```
+
+and got the verification result
+
+```console
+...
+SUMMARY:
+ ** 1 of 4 failed
+Failed Checks: attempt to add with overflow
+ File: "...", line 2, in integer_average
+
+VERIFICATION:- FAILED
+Verification Time: 0.6991158s
+```
+
+The code is actually buggy! 
+Although the average of two `i32` integers is in the range of `i32`, the intermediate sum `a + b` may overflow.
+A counterexample is when `a` equals `i32::MAX` and `b` equals any positive integer, the sum of them will be greater than `i32::MAX`, and hence the overflow.
+
+
+The examples above illustrate that, although code generation is efficient and accessible, it's crucial to exercise caution and avoid blindly trusting the generated code, as it may contain errors.
+We believe there are two factors that contribute to this unreliability.
+Firstly, the training corpus for most LLMs is unverified code.
+Secondly, text prompts can be ambiguous, leading to the production of flawed code.
+Fortunately, program verifiers such as Kani can provide valuable information about generated code, such as verification results, and counterexamples.
+Armed with this information, developers can locate and fix bugs more effectively.
+But what about the potential for language models like ChatGPT to leverage such insights to improve code generation accuracy?
+It's an intriguing question that merits further exploration.
+
+
+
+
+## Code Generation with Verifiers in the Loop
+The last task we explore in this blog is: combining Kani and ChatGPT to generate code that passes verification.
+
+Recall that we found the overflow error in the expression `a + b` in the generated function `integer_average` with Kani.
+We shared this information with ChatGPT.
+
+```
+Q: The expression (a + b) / 2 may overflow.
+```
+
+ChatGPT agreed with us and fixed the overflow with a new implementation using `checked_add`:
+
+``` rust
+fn integer_average(num1: i32, num2: i32) -> i32 {
+    match num1.checked_add(num2) {
+        Some(sum) => sum / 2,
+        None => {
+            // Handle overflow gracefully
+            println!("Overflow occurred!");
+            std::i32::MAX // Fallback value
+        }
+    }
+}
+```
+
+We reran Kani on this new implementation.
+Kani verified that this new version is correct!
+However, the function is no longer complete because it doesn't computes the average for all `i32` integers as we specified.
+For example, it does not compute the average for the input `integer_average(std::i32::MAX, 1)`.
+So, we tried again with the following prompt to generate a complete version of `integer_average`.
+
+```
+Q: Can you give me a fix that does not throw any error?
+```
+
+This time, ChatGPT found us an implementation that accepts all `i32` integers as input.
+
+```
+fn integer_average(num1: i32, num2: i32) -> i32 {
+    num1 / 2 + num2 / 2 + (num1 % 2 + num2 % 2) / 2
+}
+```
+
+Kani verifies that this implementation is correct.
+
+```
+> kani integer_average.rs
+
+...
+SUMMARY:
+ ** 0 of 6 failed
+
+VERIFICATION:- SUCCESSFUL
+Verification Time: 0.5309424s
+```
+
+
+
+## A More Practical Example: Program Optimization
+In this section, we will repeat the three tasks on a more practical and challenging problem.
+
 First, we wrote a Rust function that computes the lowest unset bit in a `u32` integer.
+```
+fn lowest_unset_bit_ori(x: u32) -> Option<u8> {
+    let mut mask = 1;
+    for i in 0..32 {
+        if x & mask == 0 {
+            return Some(i);
+        }
+        mask <<= 1;
+    }
+    None
+} 
+```
 Our implementation uses a loop to iterate through all 32 bits in the input.
 And we know that this could be slower than using some [bit twiddling hacks](https://graphics.stanford.edu/~seander/bithacks.html).
 In this case, our goal is to optimize the function with ChatGPT.
@@ -83,7 +216,7 @@ fn lowest_unset_bit(x: u32) -> Option<u8> {
 After a few seconds, ChatGPT gave us a solution
 
 ``` rust
-fn lowest_unset_bit(x: u32) -> Option<u8> {
+fn lowest_unset_bit_opt(x: u32) -> Option<u8> {
     if x == std::u32::MAX{
         return None;
     }
@@ -95,59 +228,7 @@ fn lowest_unset_bit(x: u32) -> Option<u8> {
 
 along with an explanation.
 
-From these two examples, ChatGPT's code generation capabilities are thoroughly impressive.
-Not only does it produce code that looks good at first glance, but it also provides explanations that give us greater confidence that the code is doing exactly what we intended it to do.
-In fact, we can even request ChatGPT to generate a driver function and some test cases using follow-up prompts to further test the generated code.
-However, as verification folks, we know that we still can't be completely sure that the code is correct without **verification**.
 
-
-## Verification of Generated Code
-So, naturally, our next task is: can we verify the generated programs with Kani?
-
-#### Example 1.b
-Continuing from Example 1.a.
-We can simply transform the driver function into a harness by substituting the test cases with `kani::any()`.
-
-``` rust
-fn integer_average(a: i32, b: i32) -> i32 {
-    (a + b) / 2     // <------ line 2
-}
-
-#[kani::proof]
-fn main() {
-    let a = kani::any();
-    let b = kani::any();
-    let result = integer_average(a, b);
-    println!("The average of {} and {} is {}", a, b, result);
-}
-```
-
-This harness verifies that, for any `i32` integers `a` and `b`, the function `integer_average` does not have any bug that [Kani can spot](https://model-checking.github.io/kani/tutorial-kinds-of-failure.html).
-
-We ran Kani on the above program
-
-```console
-foo@bar:~$ kani integer_average.rs
-```
-
-and got the verification result
-
-```console
-...
-SUMMARY:
- ** 1 of 4 failed
-Failed Checks: attempt to add with overflow
- File: "...", line 2, in integer_average
-
-VERIFICATION:- FAILED
-Verification Time: 0.6991158s
-```
-
-The code is actually buggy! 
-Although the average of two `i32` integers is in the range of `i32`, the intermediate sum `a + b` may overflow.
-A counterexample is when `a` equals `i32::MAX` and `b` equals any positive integer, the sum of them will be greater than `i32::MAX`, and hence the overflow.
-
-#### Example 2.b
 Demonstrating that one program is an optimization of another requires proving two things: that the programs are equivalent and that the optimized version performs better.
 Although proving the performance improvement can be challenging, we can at least verify the equivalence of the two implementations using Kani. 
 We put the implementation we wrote and the implementation ChatGPT generated together and wrote a harness function for checking the equivalence of the implementation of `lowest_unset_bit` we provided and the implementation ChatGPT generated.
@@ -165,6 +246,7 @@ fn lowest_unset_bit_ori(x: u32) -> Option<u8> {
     }
     None
 } 
+
 // Optimized implementation generated by ChatGPT.
 fn lowest_unset_bit_opt(x: u32) -> Option<u8> {
     if x == std::u32::MAX{
@@ -219,78 +301,6 @@ To better understand the bug, we asked Kani to produce a counterexample with the
 The counterexample is when `x` equals `2147483647` (`i32::MAX`).
 
 
-The examples above illustrate that, although code generation is efficient and accessible, it's crucial to exercise caution and avoid blindly trusting the generated code, as it may contain errors.
-We believe there are two factors that contribute to this unreliability.
-Firstly, the training corpus for most LLMs is unverified code.
-Secondly, text prompts can be ambiguous, leading to the production of flawed code.
-Fortunately, program verifiers such as Kani can provide valuable information about generated code, such as verification results, and counterexamples.
-Armed with this information, developers can locate and fix bugs more effectively.
-But what about the potential for language models like ChatGPT to leverage such insights to improve code generation accuracy?
-It's an intriguing question that merits further exploration.
-
-
-
-
-## Code Generation with Verifiers in the Loop
-The last task we explore in this blog is: can we combine Kani and ChatGPT to generate correct and verified code?
-
-#### Example 1.c
-Continuing from Example 1.b.
-Recall that we found the overflow error in the expression `a + b` in the generated code with Kani.
-We shared this information with ChatGPT.
-
-```
-Q: The expression (a + b) / 2 may overflow.
-```
-
-ChatGPT agreed with us and fixed the overflow with a new implementation using `checked_add`:
-
-``` rust
-fn integer_average(num1: i32, num2: i32) -> i32 {
-    match num1.checked_add(num2) {
-        Some(sum) => sum / 2,
-        None => {
-            // Handle overflow gracefully
-            println!("Overflow occurred!");
-            std::i32::MAX // Fallback value
-        }
-    }
-}
-```
-
-We reran Kani on this new implementation.
-Kani verified that this new version is correct!
-However, the function is no longer complete because it doesn't computes the average for all `i32` integers as we specified.
-For example, it does not compute the average for the input `integer_average(std::i32::MAX, 1)`.
-So, we tried again with the following prompt to generate a complete version of `integer_average`.
-
-```
-Q: Can you give me a fix that does not throw any error?
-```
-
-This time, ChatGPT found us an implementation that accepts all `i32` integers as input.
-
-```
-fn integer_average(num1: i32, num2: i32) -> i32 {
-    num1 / 2 + num2 / 2 + (num1 % 2 + num2 % 2) / 2
-}
-```
-
-Kani verifies that this implementation is correct.
-
-```
-> kani integer_average.rs
-
-...
-SUMMARY:
- ** 0 of 6 failed
-
-VERIFICATION:- SUCCESSFUL
-Verification Time: 0.5309424s
-```
-
-#### Example 2.c
-Recall that we got a counterexample `x = 2147483647` from Kani for the equivalence check of `lowest_unset_bit`.
 We reported this counterexample to ChatGPT and asked for a fix.
 
 ```
@@ -300,7 +310,7 @@ Q: The optimized version does not produce the same value as the original for x =
 It gave as a new optimization.
 
 ``` rust
-fn lowest_unset_bit(x: u32) -> Option<u8> {
+fn lowest_unset_bit_opt_2(x: u32) -> Option<u8> {
     if x == std::u32::MAX{
         return None;
     }
@@ -326,7 +336,7 @@ The overflow has been fixed, but the equivalence failure persists.
 Similarly, we produced another counterexample `x = 4293918719` with Kani, reported it to ChatGPT, and got another optimization.
 
 ``` rust
-fn lowest_unset_bit(x: u32) -> Option<u8> {
+fn lowest_unset_bit_3(x: u32) -> Option<u8> {
     if x == std::u32::MAX{
         return None;
     }
