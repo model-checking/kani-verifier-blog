@@ -15,7 +15,7 @@ All you need to do is provide a text prompt describing the program you want, and
 We were also eager to explore the possibilities of using LLMs for daily coding tasks, so we decided to put ChatGPT to the test.
 In this blog post, we'll share our experiences with using ChatGPT and Kani to solve example coding problems, and explore how these technologies could revolutionize the way we approach software development.
 The experiments we did include the following three tasks:
-1. Writing a prompt and generate *unverified* code with ChatGPT.
+1. Writing a prompt to generate *unverified* code with ChatGPT.
 2. Checking the generated code with Kani to see if it's correct.
 3. Using ChatGPT and Kani iteratively to converge to code that passes verification.
 
@@ -33,7 +33,7 @@ For the toy problem, the prompt is also very simple and straightforward.
 Q: Can you write me a Rust function that computes the integer average of two integers?
 ```
 
-Giving the above prompt, ChatGPT answered us with the following function
+Giving the above prompt, ChatGPT answered us with the following function,
 
 ```rust
 fn integer_average(a: i32, b: i32) -> i32 {
@@ -41,11 +41,11 @@ fn integer_average(a: i32, b: i32) -> i32 {
 }
 ```
 
-, an explanation
+an explanation,
 >In this function, we define a function called integer_average that takes two integer arguments a and b.
 The function then adds the two arguments together and divides the result by 2 to compute the integer average.
 
-, and even a driver function to call and test the average function.
+and even a driver function to call and test the average function.
 
 ```rust
 fn main() {
@@ -110,7 +110,7 @@ A counterexample is when `a` equals `i32::MAX` and `b` equals any positive integ
 
 The examples above illustrate that, although code generation is efficient and accessible, it's crucial to exercise caution and avoid blindly trusting the generated code, as it may contain errors.
 We believe there are two factors that contribute to this unreliability.
-Firstly, most of the programs in the training corpus of LLMs are unverified programs.
+Firstly, most of the programs in the training corpus of LLMs are unverified programs[^footnote-training-corpus].
 Secondly, text prompts can be ambiguous, leading to the production of flawed code.
 Fortunately, program verifiers such as Kani can provide valuable information about generated code, such as verification results, and counterexamples.
 Armed with this information, developers can locate and fix bugs more effectively.
@@ -147,7 +147,7 @@ fn integer_average(num1: i32, num2: i32) -> i32 {
 
 We reran Kani on this new implementation.
 Kani verified that this new version is correct!
-However, the function is no longer complete because it doesn't computes the average for *all* `i32` integers as we specified.
+However, the function is no longer complete because it doesn't compute the average for *all* `i32` integers as we specified.
 For example, it does not compute the average for the input `integer_average(std::i32::MAX, 1)`.
 So, we tried again with the following prompt to generate a complete version of `integer_average`.
 
@@ -163,7 +163,7 @@ fn integer_average(num1: i32, num2: i32) -> i32 {
 }
 ```
 
-Kani verifies that this implementation is correct.
+Kani didn't report any failure on this implementation.
 
 ```
 > kani integer_average.rs
@@ -232,7 +232,7 @@ along with an explanation.
 Demonstrating that one program is an optimization of another requires proving two things: that the programs are equivalent and that the optimized version performs better.
 Although proving the performance improvement is challenging, we can at least verify the equivalence of the two implementations using Kani. 
 We put the implementation we wrote and the implementation ChatGPT generated together and wrote a harness function for checking the equivalence of two the implementation of `lowest_unset_bit`.
-In the harness function, we let the input `x` be any `u32` integer, run both implementations on `x`, and check that the outputs return by them are the same.
+In the harness function, we let the input `x` be any `u32` integer, call both implementations on `x`, and check that the outputs returned by them are the same.
 
 ``` rust
 // Original implementation.
@@ -288,7 +288,7 @@ Verification Time: 0.84979576s
 The generated implementation is incorrect!
 There were two failed checks.
 The first one `Failed Checks: attempt to add with overflow` says that the addition `x + 1` may overflow.
-The other one says that equivalent check may fail---the two implementations are actually not equivalent.
+The other one says that equivalence check may fail---the two implementations are actually not equivalent.
 
 
 To better understand the bug, we asked Kani to produce a counterexample with the `--concrete-playback` option (discussed in [our previous post](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html)).
@@ -318,7 +318,7 @@ fn lowest_unset_bit_opt_2(x: u32) -> Option<u8> {
 } 
 ```
 
-We ran Kani to check if the new version is equivalent to the original implementation with the same harness function.
+We reran Kani to check if the new version is equivalent to the original implementation with the same harness function.
 This time, there was only one failed check.
 
 ```
@@ -358,7 +358,7 @@ VERIFICATION:- SUCCESSFUL
 Verification Time: 5.308244s
 ```
 
-The result saves us from spending a lot of time understanding the bit hack and convincing ourselves that the two implementations are equivalent.
+The result saves us the effort of manually reasoning about the bit hack and convincing ourselves that the two implementations are equivalent.
 
 ## Summary
 
@@ -366,3 +366,6 @@ In this post, we showed how to generate programs with ChatGPT, how to verify gen
 With increasingly powerful code generation capabilities, software development is becoming more automated and accessible.
 However, as developers spend less time on implementation details, corner cases, and safety issues, their code becomes more susceptible to errors.
 We believe program verifiers like Kani will play a critical role in ensuring the correctness of such code, revealing potential bugs, and helping developers fix them.
+
+## Footnote
+[^footnote-training-corpus]: For example, [CodeX](https://arxiv.org/pdf/2107.03374.pdf), which powers GitHub Copilot, is training on publicly available code from GitHub.
