@@ -121,7 +121,7 @@ It's an intriguing question that merits further exploration.
 
 
 ## Code Generation with Verifiers in the Loop
-The last task we explore in this blog is: **using ChatGPT and Kani iteratively to converge to code that passes verification.**.
+The last task we explore in this post is: **using ChatGPT and Kani iteratively to converge to code that passes verification.**.
 
 Recall that we found the overflow error in the expression `a + b` in the generated function `integer_average` with Kani.
 We shared this information with ChatGPT.
