@@ -168,11 +168,17 @@ Therefore, the packet number is encoded in 1 to 4 bytes, following a process tha
 We noticed that s2n-quic's function for decoding the packet number, `decode_packet_number`, was showing up in the CPU flame graphs that the s2n-quic CI generates based on a range of common traffic patterns.
 If you haven't seen a flame graph before, the important thing to take away is the wider the box containing each function is, the more relative CPU time that particular function is using.
 From the flame graph below we can see the `s2n_quic_core::packet::number::decode_packet_number`  function is consuming the bulk of the CPU time needed to `unprotect` the packet, representing about 2% of the total CPU used for processing a packet. 
-[Image: image.png]The [QUIC RFC](https://datatracker.ietf.org/doc/html/rfc9001#section-9.5) requires this packet decoding process be free of timing side channels, which our initial implementation ensured by using volatile read operations at the expense of additional CPU utilization.
+
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/s2n-quic-decode-packet-number-flame-graph-before.png" alt="decode_packet_number flame graph before optimization" />
+
+The [QUIC RFC](https://datatracker.ietf.org/doc/html/rfc9001#section-9.5) requires this packet decoding process be free of timing side channels, which our initial implementation ensured by using volatile read operations at the expense of additional CPU utilization.
 As was the case with the RTT estimator, there is room for optimization here.
 We found that by supplying some additional compiler instructions we could refactor `decode_packet_number` in a way that would fulfill the constant-time requirement from the RFC while avoiding the expensive volatile read operations.
 With these optimizations, the CPU usage of `decode_packet_number` became so small it barely showed up in the flame graph at all:
-[Image: image.png]All good, right? Not so fast...
+
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/s2n-quic-decode-packet-number-flame-graph-after.png" alt="decode_packet_number flame graph after optimization" />
+
+All good, right? Not so fast...
 
 ```bash
 $ cargo kani --harness packet::number::tests::rfc_differential_test --tests 
