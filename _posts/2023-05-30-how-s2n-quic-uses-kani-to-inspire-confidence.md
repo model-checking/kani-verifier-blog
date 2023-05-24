@@ -65,7 +65,7 @@ smoothed_rtt_nanos *= 7;
 let mut rtt_nanos = rtt.as_nanos() as u64;
 rtt_nanos /= 8;
 
-self.smoothed_rtt = Duration::from_nanos(smoothed_rtt_nanos + rtt_nanos) 
+self.smoothed_rtt = Duration::from_nanos(smoothed_rtt_nanos + rtt_nanos);
 ```
 
 This solution sacrifices a bit of unnecessary accuracy at the nanosecond level, but it eliminates the 3 function calls that were impacting CPU utilization:
@@ -83,7 +83,7 @@ mov     edx, ecx
 ret
 ```
 
-Now that we have an optimized solution, we want to test that it has the same results (to the required level of precision) of the unoptimized code.
+Now that we have an optimized solution, we want to test that it has the same results (to the required level of precision) as the unoptimized code.
 Next, I'll show how we do that with both fuzz testing and Kani verification in a single test harness.
 
 ## From fuzz testing to Kani verification to continuous integration
@@ -115,7 +115,7 @@ This technique is called "differential testing" and is a powerful method for ide
 The Amazon Science blog recently [highlighted](https://www.amazon.science/blog/how-we-built-cedar-with-automated-reasoning-and-differential-testing) the value of using this technique with the AWS Cedar authorization engine.
 
 Now we have a fuzz test to ensure the assertion that the optimized and unoptimized code result in the same millisecond result holds over millions of different combinations of `smoothed_rtt` and `rtt` values.
-But what if we want to prove that this assertion is true for **all** combinations of `smoothed_rtt` and `rtt.`
+But what if we want to prove that this assertion is true for **all** combinations of `smoothed_rtt` and `rtt`?
 That's where Kani comes in. 
 
 Upgrading this fuzz test to a fuzz + verification test is as easy as adding a few config attributes to the existing test harness:
@@ -162,7 +162,7 @@ To address these issues, QUIC assigns a monotonically increasing packet number t
 
 The packet number is a value ranging from 0 to 2^62-1.
 While such a large range is necessary for supporting long running connections that may send many packets, it also would consume 8 bytes of every packet.
-8 bytes might not sound like much, but with s2n-quic being used to send billions of packets back and forth it adds up and ultimately increases the overhead of using the QUIC protocol.
+8 bytes might not sound like much, but with s2n-quic being used to send billions of packets back and forth, it adds up and ultimately increases the overhead of using the QUIC protocol.
 Therefore, the packet number is encoded in 1 to 4 bytes, following a process that truncates the most significant bits of the packet number based on some assumptions about how wide a range of packet numbers could be in flight at a given time.
 
 We noticed that s2n-quic's function for decoding the packet number, `decode_packet_number`, was showing up in the CPU flame graphs that the s2n-quic CI generates based on a range of common traffic patterns.
@@ -264,7 +264,7 @@ Since the size of the variable-length integer used to represent the Stream data 
 If we try to fit 63 bytes of data in this packet, this will consume 64 bytes from the packet, as the length of 63 can be encoded in 1 byte, as we saw above.
 We have 65 bytes to work with though, so why not try to fit one more byte? A length of 64 requires 2 bytes to encode, so now the total amount we've consumed is 2 bytes + 64 bytes = 66 bytes, more than the available capacity. 
 
-The logic s2n-quic uses to determine how much data to try to fit in a `Stream` frame is contained in the function `try_fit` .
+The logic s2n-quic uses to determine how much data to try to fit in a `Stream` frame is contained in the function `try_fit`.
 With complicated logic like this, we have a Bolero test harness to validate the correctness of the logic:
 
 ```rust
@@ -323,7 +323,7 @@ A single testing technique may not catch every issue, but layering fuzz testing,
 ## Conclusion
 
 s2n-quic has a very high bar for software quality, as any bug in a transport protocol implementation can have drastic consequences for the customers that rely on the library as the foundation for the applications and services they are building.
-We've seen above how Kani helps us meet that bar with a vanishingly small amount of effort by easily integrating with our existing Bolero fuzz test harnesses and automatically running as part of our continuous integration test suite.
+I've shown above how Kani helps us meet that bar with a vanishingly small amount of effort by easily integrating with our existing Bolero fuzz test harnesses and automatically running as part of our continuous integration test suite.
 And even better than catching bugs in the wild, Kani has helped s2n-quic catch bugs before they make it any further than a pull request, even when a fuzz test was unable to.
 As of now, s2n-quic has over thirty Bolero harnesses with Kani enabled, spanning many critical parts of the codebase.
 As we continue to add more and more proofs and increase code coverage, Kani gives us the confidence to continue optimizing and improving s2n-quic while ensuring the correctness our customers require.
