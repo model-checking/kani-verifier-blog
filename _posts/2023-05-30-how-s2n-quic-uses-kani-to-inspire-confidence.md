@@ -20,7 +20,7 @@ In this blog post, I'll show a few examples of how we use Kani to easily and aut
 
 Besides the importance of using Kani, another learning s2n-quic took to heart was that if a tool is not easy and minimally disruptive to use, it probably won't get used much.
 For that reason, s2n-quic makes heavy use of the [Bolero](https://camshaft.github.io/bolero/) property-testing framework to add Kani's verification functionality to our existing fuzz testing harnesses.
-This unification of multiple testing methods in a single framework has previously been [covered in detail](https://model-checking.github.io/kani-verifier-blog/2022/10/27/using-kani-with-the-bolero-property-testing-framework.html) on this blog, but its worth revisiting to see how easy it makes incorporating Kani verification into s2n-quic.
+This unification of multiple testing methods in a single framework has previously been [covered in detail](https://model-checking.github.io/kani-verifier-blog/2022/10/27/using-kani-with-the-bolero-property-testing-framework.html) on this blog, but it's worth revisiting to see how easy it makes incorporating Kani verification into s2n-quic.
 To illustrate this, I'll dive into how we optimized an important component of s2n-quic, and in the next section we'll see how we ensured the optimized code was correct by adding Kani to a Bolero fuzz test harness.
 
 This particular code involves s2n-quic's round trip time estimator.
