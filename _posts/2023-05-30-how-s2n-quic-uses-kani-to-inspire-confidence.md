@@ -317,7 +317,7 @@ Kani found a failure in only 20 seconds!
 
 It turns out in this case that the bug was the `model` function itself being overly strict, but it could have just as easily been a bug in the `try_fit` implementation.
 This example highlights yet another learning for s2n-quic: the value of defense in depth.
-We're strong believers in the Swiss cheese model, in which each layer of cheese may contain many holes (such as the fuzz test above missing out on the failure), but combining the layers together greatly reduce the chance that a hole reaches all the way through.
+We're strong believers in the Swiss cheese model, in which each layer of cheese may contain many holes (such as the fuzz test above missing out on the failure), but combining the layers together greatly reduces the chance that a hole reaches all the way through.
 A single testing technique may not catch every issue, but layering fuzz testing, Kani verification, and all the other testing methodologies s2n-quic employs vastly improves the likelihood that at least one test will catch a bug before it reaches production.
 
 ## Conclusion
