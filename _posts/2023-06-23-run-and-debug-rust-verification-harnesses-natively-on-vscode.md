@@ -83,7 +83,7 @@ You are then presented with two options:
 1. [Generate the report for the harness](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md#view-trace-report)
 2. [Run concrete playback to generate unit tests](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md#use-concrete-playback-to-debug-a-kani-harness).
 
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-proof.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-kani-harness.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
 
 Kani can help you generate unit tests containing the counter-example (or values for which the assertion fails). Each unit test provides inputs that will either trigger a property failure or satisfy a cover statement. This feature called [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html) allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation, and the VSCode Extension makes using concrete playback easy. You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
 
@@ -122,7 +122,7 @@ Running the unit test using the Run Test (Kani) button, shows us what we’re ex
 
 In order to peek under the hood to find out the faulty assumptions that lead to unexpected behavior, it is really important to look at the concrete counter examples for which our assertions fail. By setting breakpoints and clicking the debug test (Kani) button, you are taken into the debugger which allows you to look at the specific values for which the assertion fails.
 
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/debugger-1.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
 In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter example, the property `can_hold`  does not hold.
 
@@ -132,7 +132,7 @@ Now that we know that for `original.width = 0`, our assertion fails, we can repe
 
 We will now add these assumptions through `Kani::assume` and re-run the verification in the extension.
 
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/verifying-rightly.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="verifying-kani-harness" />
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/verifying-success.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="verifying-success" />
 
 And with that green check-mark, you can be assured that the harness has been verified!
 
