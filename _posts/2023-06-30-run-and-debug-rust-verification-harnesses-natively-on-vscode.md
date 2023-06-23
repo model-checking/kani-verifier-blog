@@ -3,6 +3,7 @@
 Kani is a verification tool that can help you prove properties about your Rust code. To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
 In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace. The extension automatically detects all harness within the project, and allows users to run and debug them directly on VS Code. To allow a more comfortable verification experience, Kani is now usable directly from the VS Code user interface. Until now, developers could only run and debug harnesses via a command-line interface.
+
 ![Kani-view](../assets/images/vs-code-images/kani-demo.gif)
 
 ## A Simple Example
@@ -65,7 +66,9 @@ With the extension, running Kani on a harness to verify it, is as simple as clic
 #### View Kani harnesses
 
 As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the left border of VS Code. This is how the testing page looks like when you click on the panel.
-![](../assets/images/vs-code-images/view-kani-harnesses.png)
+
+![view-kani-harnesses](../assets/images/vs-code-images/view-kani-harnesses.png)
+
 #### Run Kani harnesses
 
 You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension. Once you run the harness using the extension, you are shown a failure banner if the verification has failed (or a green check-mark if it’s succeeded).
@@ -105,6 +108,7 @@ fn kani_concrete_playback_stretched_rectangle_can_hold_original() {
 #### Run Kani-generated test
 
 Running the unit test using the Run Test (Kani) button, shows us what we’re expecting–that the current unit test is failing. This is because the unit test is using the counter-examples to invoke the function `stretched_rectangle_can_hold_original`.
+
 ![run-concrete-playback-test](../assets/images/vs-code-images/run-concrete-playback-test.png)
 
 ### Debug Kani unit test
@@ -120,7 +124,9 @@ In our case, we can see that for `original.height = 0` , the larger rectangle’
 Now that we know that for `original.width = 0`, our assertion fails, we can repeat the experiment with explicit assumptions.  The experiments should reveal that for all parameters, having a 0 value will cause the assertion to fail. Additionally, there is a problem if `factor` is `1` because in this case stretch will return `Some(...)` but the stretched rectangle will be the same size as the original. We missed these cases in our unit and property-based tests.
 
 We will now add these assumptions through `Kani::assume` and re-run the verification in the extension.
+
 ![success-verified](../assets/images/vs-code-images/verifying-rightly.gif)
+
 And with that green check-mark, you can be assured that the harness has been verified!
 
 
