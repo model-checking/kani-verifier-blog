@@ -7,8 +7,8 @@ Kani is a verification tool that can help you prove properties about your Rust c
 To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
 In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace.
-The extension automatically detects all harness within the project, and allows users to run and debug them directly in VS Code.
-To allow an easier verification experience, Kani is now usable directly from the VS Code user interface.
+The extension automatically detects all harnesses within the package, and allows users to run and debug them directly in VS Code.
+To allow a more comfortable verification experience, Kani is now usable directly from the VS Code user interface.
 Until now, developers could only run and debug harnesses via a command-line interface.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
@@ -71,11 +71,11 @@ VERIFICATION:- FAILED
 
 ## Introducing the Kani VS Code Extension
 
-Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs.
-As you write proof harnesses using Kani, the extension detects them and conveniently displays them within your testing panel.
+The Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs.
+As you write Kani harnesses, the extension detects them and conveniently displays them within your testing panel.
 The extension offers detailed diagnostics, feedback about proof failures, error messages, and stack traces.
 This empowers our users to find bugs and verify their code quicker.
-You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code instance.
+You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code window.
 
 ## Using the VS Code extension
 
@@ -94,7 +94,8 @@ This is how the testing page looks like when you click on the panel.
 
 #### Run Kani harnesses
 
-You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension. Once you run the harness using the extension, you are shown a failure banner if verification failed (or a green check mark if it succeeded).
+You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension.
+Once you run the harness using the extension, you are shown a failure banner if verification failed (or a green check mark if it succeeded).
 
 In our example, as with the command line, we can see through visual markers such as the failure banner pop-up and the red failure marker, that verification failed.
 
@@ -116,7 +117,8 @@ Next, we’ll generate the unit test by clicking on the `Run Concrete Playback f
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/generate-counter-example.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="generate-unit-test" />
 
-By simply clicking on a link, we have our counter example unit test pasted directly below the harness. This is what the unit test looks like:
+By simply clicking on a link, we have our counter example unit test pasted directly below the harness.
+This is what the unit test looks like:
 
 ```rust
 #[test]
@@ -149,11 +151,12 @@ By setting breakpoints and clicking the debug test (Kani) button, you are taken 
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
-In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter-example, the property `can_hold`  does not hold.
+In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter-example, the property `can_hold` does not hold.
 
 ### And finally, verify the harness with the right assumptions
 
-Now that we know that for `original.width = 0`, our assertion fails, we can repeat the experiment with explicit assumptions.  The experiments should reveal that for all parameters, having a 0 value will cause the assertion to fail.
+Now that we know that for `original.width = 0`, our assertion fails, we can repeat the experiment with explicit assumptions.
+The experiments should reveal that for all parameters, having a 0 value will cause the assertion to fail.
 Additionally, there is a problem if `factor` is `1` because in this case stretch will return `Some(...)` but the stretched rectangle will be the same size as the original.
 We missed these cases in our unit and property-based tests.
 
