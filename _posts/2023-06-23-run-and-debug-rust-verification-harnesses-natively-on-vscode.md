@@ -53,13 +53,18 @@ The current way of interacting with Kani is through the command line. Users invo
 ```
 $ cargo kani --harness stretched_rectangle_can_hold_original
 # --snip--
-[rectangle::verification::stretched_rectangle_can_hold_original.assertion.1] line 86 assertion failed: larger.can_hold(&original): FAILURE
-VERIFICATION FAILED
+Check 2: verification::stretched_rectangle_can_hold_original.assertion.1
+         - Status: FAILURE
+         - Description: "assertion failed: larger.can_hold(&original)"
+         - Location: src/main.rs:36:13 in function verification::stretched_rectangle_can_hold_original
+# --snip--
+VERIFICATION:- FAILED
 ```
 
 ## Introducing the Kani VS Code Extension
 
-Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs. As you write proof harnesses using Kani, the extension detects them and conveniently showcases them within your testing panel. The extension offers detailed diagnostics, comprehensive feedback about proof failures, error messages, and stack traces. This empowers our users to find bugs and verify their code quicker. You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code instance.
+Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs. As you write proof harnesses using Kani, the extension detects them and conveniently displays
+them within your testing panel. The extension offers detailed diagnostics, feedback about proof failures, error messages, and stack traces. This empowers our users to find bugs and verify their code quicker. You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code instance.
 
 ## Using the VS Code extension
 
@@ -69,7 +74,8 @@ With the extension, running Kani on a harness to verify it, is as simple as clic
 
 #### View Kani harnesses
 
-As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the left border of VS Code. This is how the testing page looks like when you click on the panel.
+As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the
+[primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code. This is how the testing page looks like when you click on the panel.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/view-kani-harnesses.png" alt="view-kani-harnesses" />
 
@@ -121,7 +127,7 @@ Running the unit test using the Run Test (Kani) button, shows us what we’re ex
 
 ### Debug Kani unit test
 
-In order to peek under the hood to find out the faulty assumptions that lead to unexpected behavior, it is really important to look at the concrete counter examples for which our assertions fail. By setting breakpoints and clicking the debug test (Kani) button, you are taken into the debugger which allows you to look at the specific values for which the assertion fails.
+In order to peek under the hood to find out the missing assumptions that lead to unexpected behavior, it is really important to look at the concrete counter examples for which our assertions fail. By setting breakpoints and clicking the debug test (Kani) button, you are taken into the debugger which allows you to look at the specific values for which the assertion fails.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
