@@ -63,8 +63,7 @@ VERIFICATION:- FAILED
 
 ## Introducing the Kani VS Code Extension
 
-Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs. As you write proof harnesses using Kani, the extension detects them and conveniently displays
-them within your testing panel. The extension offers detailed diagnostics, feedback about proof failures, error messages, and stack traces. This empowers our users to find bugs and verify their code quicker. You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code instance.
+Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs. As you write proof harnesses using Kani, the extension detects them and conveniently displays them within your testing panel. The extension offers detailed diagnostics, feedback about proof failures, error messages, and stack traces. This empowers our users to find bugs and verify their code quicker. You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code instance.
 
 ## Using the VS Code extension
 
@@ -74,8 +73,7 @@ With the extension, running Kani on a harness to verify it, is as simple as clic
 
 #### View Kani harnesses
 
-As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the
-[primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code. This is how the testing page looks like when you click on the panel.
+As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code. This is how the testing page looks like when you click on the panel.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/view-kani-harnesses.png" alt="view-kani-harnesses" />
 
