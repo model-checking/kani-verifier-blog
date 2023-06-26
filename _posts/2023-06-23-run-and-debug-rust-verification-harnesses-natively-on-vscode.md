@@ -5,7 +5,7 @@ title:  "Run and debug Rust verification harnesses natively on VS Code"
 
 Kani is a verification tool that can help you prove properties about your Rust code. To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
-In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace. The extension automatically detects all harness within the project, and allows users to run and debug them directly on VS Code. To allow an easier verification experience, Kani is now usable directly from the VS Code user interface. Until now, developers could only run and debug harnesses via a command-line interface.
+In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace. The extension automatically detects all harness within the project, and allows users to run and debug them directly in VS Code. To allow an easier verification experience, Kani is now usable directly from the VS Code user interface. Until now, developers could only run and debug harnesses via a command-line interface.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
 
@@ -33,7 +33,7 @@ impl Rectangle {
 }
 ```
 
-In order to prove properties about the rectangle, we wrote a proof harness. The proof harness tried to prove that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions) even when stretched. If proven this means that, for any stretch factor given, for any height and width of the original rectangle, this property holds true.
+In order to prove properties about the rectangle, we wrote a proof harness. The proof harness tried to prove that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions). If proven, this means that for any given stretch factor and any height and width of the original rectangle, this property holds true.
 
 ```rust
 #[kani::proof]
@@ -48,10 +48,11 @@ pub fn stretched_rectangle_can_hold_original() {
 
 #### How users use Kani currently
 
-The current way of interacting with Kani is through the command line. Users invoke `cargo kani` and then mention their harness that they want to verify and this gives a text based output that tells you whether your proof has succeeded or failed.
+The current way of interacting with Kani is through the command line. Users invoke `cargo kani` and specify the harness they want to verify. Kani produces text-based output that tells you whether your proof has succeeded or failed.
 
 ```
-$ cargo kani --harness stretched_rectangle_can_hold_original# --snip--
+$ cargo kani --harness stretched_rectangle_can_hold_original
+# --snip--
 [rectangle::verification::stretched_rectangle_can_hold_original.assertion.1] line 86 assertion failed: larger.can_hold(&original): FAILURE
 VERIFICATION FAILED
 ```
@@ -74,9 +75,9 @@ As soon as your rust package is opened using the Kani extension in a VS Code ins
 
 #### Run Kani harnesses
 
-You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension. Once you run the harness using the extension, you are shown a failure banner if the verification has failed (or a green check-mark if it’s succeeded).
+You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension. Once you run the harness using the extension, you are shown a failure banner if verification failed (or a green check mark if it succeeded).
 
-In our example, as with the command line, we can see through visual markers such as the failure banner pop-up and the red failure marker, that the verification has failed.
+In our example, as with the command line, we can see through visual markers such as the failure banner pop-up and the red failure marker, that verification failed.
 
 You are then presented with two options:
 
@@ -85,7 +86,7 @@ You are then presented with two options:
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-kani-harness.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
 
-Kani can help you generate unit tests containing the counter-example (or values for which the assertion fails). Each unit test provides inputs that will either trigger a property failure or satisfy a cover statement. This feature called [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html) allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation, and the VSCode Extension makes using concrete playback easy. You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
+Kani can help you generate unit tests containing the counter-example (or values for which the assertion fails). Each unit test provides inputs that will either trigger a property failure or satisfy a cover statement. This feature, called [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html), allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation, and the VSCode extension makes using concrete playback easy. You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
 
 #### Generate a counter-example unit test
 
@@ -110,11 +111,11 @@ fn kani_concrete_playback_stretched_rectangle_can_hold_original() {
 }
 ```
 
- You can see in the gif above, that the source is now annotated with two options that hover over the unit test generated called  `Run Test (Kani) | Debug Test (Kani)` which allow you to run and debug the test just like any other rust unit test.
+ You can see in the gif above that the source is now annotated with two options on top of the generated unit test called  `Run Test (Kani) | Debug Test (Kani)` which allow you to run and debug the test just like any other Rust unit test.
 
 #### Run Kani-generated test
 
-Running the unit test using the Run Test (Kani) button, shows us what we’re expecting–that the current unit test is failing. This is because the unit test is using the counter-examples to invoke the function `stretched_rectangle_can_hold_original`.
+Running the unit test using the Run Test (Kani) button, shows us what we’re expecting–that the current unit test is failing. This is because the unit test is using the counter-example to invoke the function `stretched_rectangle_can_hold_original`.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-concrete-playback-test.png" alt="run-concrete-playback-test" />
 
@@ -124,13 +125,13 @@ In order to peek under the hood to find out the faulty assumptions that lead to 
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
-In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter example, the property `can_hold`  does not hold.
+In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter-example, the property `can_hold`  does not hold.
 
 ### And finally, verify the harness with the right assumptions
 
 Now that we know that for `original.width = 0`, our assertion fails, we can repeat the experiment with explicit assumptions.  The experiments should reveal that for all parameters, having a 0 value will cause the assertion to fail. Additionally, there is a problem if `factor` is `1` because in this case stretch will return `Some(...)` but the stretched rectangle will be the same size as the original. We missed these cases in our unit and property-based tests.
 
-We will now add these assumptions through `Kani::assume` and re-run the verification in the extension.
+We will now add these assumptions through `kani::assume` and re-run the verification in the extension.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/verifying-success.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="verifying-success" />
 
