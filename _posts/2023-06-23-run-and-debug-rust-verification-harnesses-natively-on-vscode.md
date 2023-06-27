@@ -79,19 +79,18 @@ You can install the extension from the [webpage](https://marketplace.visualstudi
 
 ## Using the VS Code extension
 
-### Verify Kani harnesses
 
 With the extension, running Kani on a verification harness, is as simple as clicking a button.
 In the following sections, we’ll walk you through using the extension’s core features to debug and finally verify the rectangle example mentioned above.
 
-#### View Kani harnesses
+### View Kani harnesses
 
 As soon as your Rust package is opened using the Kani extension in a VS Code instance, you should see the Kani harnesses loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code.
 This is how the testing page looks like when you click on the panel.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/view-kani-harnesses.png" alt="view-kani-harnesses" />
 
-#### Run Kani harnesses
+### Run Kani harnesses
 
 You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension.
 Once you run the harness using the extension, you are shown a green check mark if verification succeeded, or a failure banner if it failed.
@@ -106,16 +105,16 @@ You are then presented with two options:
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-kani-harness.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
 
 Kani's [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html) feature allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation.
-The VSCode extension makes using concrete playback easy.
+The VS Code extension makes using concrete playback easy.
 You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
 
-#### Generate a counterexample unit test
+### Generate a counterexample unit test
 
 Next, we’ll generate the unit test by clicking on the `Run Concrete Playback for stretched_rectangle_can_hold_original` link that appears through a blue link on the error banner.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/generate-counter-example.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="generate-unit-test" />
 
-By simply clicking on a link, we have our counterexample unit test pasted directly below the harness.
+By clicking on the link, we have our counterexample unit test pasted directly below the harness.
 This is what the unit test looks like:
 
 ```rust
@@ -135,7 +134,7 @@ fn kani_concrete_playback_stretched_rectangle_can_hold_original() {
 
 You can see in the GIF above that the source code is now annotated with two options on top of the generated unit test, `Run Test (Kani)` and `Debug Test (Kani)`, which allow you to run and debug the test just like any other Rust unit test.
 
-#### Run Kani-generated test
+### Run Kani-generated test
 
 Running the unit test using the `Run Test (Kani)` button shows us what we were expecting -- that the unit test is failing.
 This is because the unit test is using the counterexample to invoke the function `stretched_rectangle_can_hold_original`.
@@ -171,7 +170,7 @@ You can use Kani through VS Code using the Kani VS Code extension, [available on
 In this post, we've seen how the VS Code extension can help you to iteratively verify properties of your code.
 The extension can debug the unit tests using a standard debugger, generate unit tests that demonstrate property violations, and verify the harnesses.
 
-The Kani extension has more features which weren’t mentioned in the blog, that you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
+The Kani extension has more features which weren’t mentioned in the blog, which you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
 
 Please go ahead and try the extension yourself!
 
