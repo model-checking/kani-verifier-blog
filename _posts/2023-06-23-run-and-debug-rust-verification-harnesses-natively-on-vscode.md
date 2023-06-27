@@ -52,7 +52,7 @@ pub fn stretched_rectangle_can_hold_original() {
 }
 ```
 
-#### How users use Kani currently
+#### How Kani is used currently
 
 The current way of interacting with Kani is through the command line.
 Users invoke `cargo kani` and specify the harness they want to verify.
@@ -106,18 +106,17 @@ You are then presented with two options:
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-kani-harness.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
 
-Kani can help you generate unit tests containing the counter-example (or values for which the assertion fails).
-Each unit test provides inputs that will either trigger a property failure or satisfy a cover statement.
-This feature, called [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html), allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation, and the VSCode extension makes using concrete playback easy.
+Kani's [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html) feature allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation.
+The VSCode extension makes using concrete playback easy.
 You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
 
-#### Generate a counter-example unit test
+#### Generate a counterexample unit test
 
 Next, we’ll generate the unit test by clicking on the `Run Concrete Playback for stretched_rectangle_can_hold_original` link that appears through a blue link on the error banner.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/generate-counter-example.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="generate-unit-test" />
 
-By simply clicking on a link, we have our counter example unit test pasted directly below the harness.
+By simply clicking on a link, we have our counterexample unit test pasted directly below the harness.
 This is what the unit test looks like:
 
 ```rust
@@ -140,18 +139,18 @@ You can see in the GIF above that the source is now annotated with two options o
 #### Run Kani-generated test
 
 Running the unit test using the `Run Test (Kani)` button shows us what we were expecting -- that the unit test is failing.
-This is because the unit test is using the counter-example to invoke the function `stretched_rectangle_can_hold_original`.
+This is because the unit test is using the counterexample to invoke the function `stretched_rectangle_can_hold_original`.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-concrete-playback-test.png" alt="run-concrete-playback-test" />
 
 ### Debug Kani unit test
 
-In order to peek under the hood to find out the missing assumptions that lead to unexpected behavior, it is really important to look at the concrete counter examples for which our assertions fail.
+In order to peek under the hood to find out the missing assumptions that lead to unexpected behavior, it is really important to look at the concrete counterexamples for which our assertions fail.
 By setting breakpoints and clicking the `Debug Test (Kani)` button, you are taken into the debugger which allows you to inspect the specific values for which the assertion fails.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
-In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counter-example, the property `can_hold` does not hold.
+In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counterexample, the property `can_hold` does not hold.
 
 ### And finally, verify the harness with the right assumptions
 
@@ -174,4 +173,7 @@ We've seen how the VS Code extension can help you to iteratively verify properti
 The extension can run your Kani harnesses; generate unit tests that demonstrate property violations; and verify the harnesses.
 
 The Kani extension has more features which weren’t mentioned in the blog, that you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
-If you are running into issues with the Kani extension or have feature requests or suggestions, we’d [love to hear from you](https://github.com/model-checking/kani-vscode-extension/issues).
+
+Please go ahead and try the extension yourself!
+
+If you are running into issues with the Kani extension or have feature requests or suggestions, we’d [love to hear from you](https://github.com/model-checking/kani-vscode-extension/new/issues).
