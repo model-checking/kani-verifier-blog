@@ -79,7 +79,7 @@ You can install the extension from the [webpage](https://marketplace.visualstudi
 
 ## Using the VS Code extension
 
-#### How to verify a harness using the Kani VS Code extension
+### Verify Kani harnesses
 
 With the extension, running Kani on a harness to verify it, is as simple as clicking a button.
 The following sections walk you through the first few actions you’ll need.
@@ -87,7 +87,7 @@ We’ll walk you through using the extension’s core features to debug and fina
 
 #### View Kani harnesses
 
-As soon as your rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code.
+As soon as your Rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code.
 This is how the testing page looks like when you click on the panel.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/view-kani-harnesses.png" alt="view-kani-harnesses" />
@@ -135,11 +135,11 @@ fn kani_concrete_playback_stretched_rectangle_can_hold_original() {
 }
 ```
 
-You can see in the gif above that the source is now annotated with two options on top of the generated unit test called  `Run Test (Kani) | Debug Test (Kani)` which allow you to run and debug the test just like any other Rust unit test.
+You can see in the GIF above that the source is now annotated with two options on top of the generated unit test, `Run Test (Kani)` and `Debug Test (Kani)`, which allow you to run and debug the test just like any other Rust unit test.
 
 #### Run Kani-generated test
 
-Running the unit test using the Run Test (Kani) button, shows us what we’re expecting–that the current unit test is failing.
+Running the unit test using the `Run Test (Kani)` button shows us what we were expecting -- that the unit test is failing.
 This is because the unit test is using the counter-example to invoke the function `stretched_rectangle_can_hold_original`.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-concrete-playback-test.png" alt="run-concrete-playback-test" />
@@ -147,7 +147,7 @@ This is because the unit test is using the counter-example to invoke the functio
 ### Debug Kani unit test
 
 In order to peek under the hood to find out the missing assumptions that lead to unexpected behavior, it is really important to look at the concrete counter examples for which our assertions fail.
-By setting breakpoints and clicking the debug test (Kani) button, you are taken into the debugger which allows you to look at the specific values for which the assertion fails.
+By setting breakpoints and clicking the `Debug Test (Kani)` button, you are taken into the debugger which allows you to inspect the specific values for which the assertion fails.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
