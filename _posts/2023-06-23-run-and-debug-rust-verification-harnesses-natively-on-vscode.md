@@ -37,9 +37,9 @@ impl Rectangle {
 }
 ```
 
-In order to prove properties about the rectangle, we wrote a verification harness.
-The harness tried to prove that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions).
-If proven, this means that for any given stretch factor and any height and width of the original rectangle, this property holds true.
+In order to verify properties about the rectangle, we wrote a verification harness.
+The harness tried to verify that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions).
+If verified succesfully, this means that for any given stretch factor and any height and width of the original rectangle, this property holds true.
 
 ```rust
 #[kani::proof]
