@@ -176,4 +176,4 @@ The Kani extension has more features which weren’t mentioned in the blog, that
 
 Please go ahead and try the extension yourself!
 
-If you are running into issues with the Kani extension or have feature requests or suggestions, we’d [love to hear from you](https://github.com/model-checking/kani-vscode-extension/new/issues).
+If you are running into issues with the Kani extension or have feature requests or suggestions, we’d [love to hear from you](https://github.com/model-checking/kani-vscode-extension/issues/new/choose).
