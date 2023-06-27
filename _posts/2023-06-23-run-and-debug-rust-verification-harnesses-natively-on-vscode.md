@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Run and debug Rust verification harnesses natively on VS Code"
+title:  "Run and debug Rust verification harnesses from VS Code"
 ---
 
 Kani is a verification tool that can help you systematically test properties about your Rust code.
@@ -71,7 +71,7 @@ VERIFICATION:- FAILED
 
 ## Introducing the Kani VS Code Extension
 
-The Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug harnesses.
+The [Kani VS Code extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug harnesses.
 As you write Kani harnesses, the extension detects them and conveniently displays them within your testing panel.
 The extension offers detailed diagnostics, feedback about verification failures, error messages, and stack traces.
 This empowers our users to find bugs and verify their code quicker.
@@ -81,7 +81,7 @@ You can install the extension from the [webpage](https://marketplace.visualstudi
 
 ### Verify Kani harnesses
 
-With the extension, running Kani on a verification harness is as simple as clicking a button.
+With the extension, running Kani on a verification harness, is as simple as clicking a button.
 In the following sections, we’ll walk you through using the extension’s core features to debug and finally verify the rectangle example mentioned above.
 
 #### View Kani harnesses
@@ -133,7 +133,7 @@ fn kani_concrete_playback_stretched_rectangle_can_hold_original() {
 }
 ```
 
-You can see in the GIF above that the source is now annotated with two options on top of the generated unit test, `Run Test (Kani)` and `Debug Test (Kani)`, which allow you to run and debug the test just like any other Rust unit test.
+You can see in the GIF above that the source code is now annotated with two options on top of the generated unit test, `Run Test (Kani)` and `Debug Test (Kani)`, which allow you to run and debug the test just like any other Rust unit test.
 
 #### Run Kani-generated test
 
@@ -162,14 +162,14 @@ We will now add these assumptions through `kani::assume` and re-run the verifica
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/verifying-success.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="verifying-success" />
 
-And with that green check-mark, you can be assured that the harness has been verified!
+And with that green check mark, you can be assured that the harness has been verified!
 
 
 ## Wrapping up
 
-You can use Kani natively in VS Code using the Kani VS Code extension, [available on the marketplace](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) now.
+You can use Kani through VS Code using the Kani VS Code extension, [available on the marketplace](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) now.
 In this post, we've seen how the VS Code extension can help you to iteratively verify properties of your code.
-The extension can run your Kani harnesses; generate unit tests that demonstrate property violations; and verify the harnesses.
+The extension can debug the unit tests using a standard debugger, generate unit tests that demonstrate property violations, and verify the harnesses.
 
 The Kani extension has more features which weren’t mentioned in the blog, that you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
 
