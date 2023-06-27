@@ -8,7 +8,7 @@ To learn more about Kani, check out the [Kani tutorial](https://model-checking.g
 
 In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace.
 The extension automatically detects all harnesses within the package, and allows users to run and debug them directly in VS Code.
-To allow a more comfortable verification experience, Kani is now usable directly from the VS Code user interface.
+To allow a more comfortable verification experience, Kani is now usable from the VS Code user interface.
 Until now, developers could only run and debug harnesses via a command-line interface.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
@@ -81,9 +81,8 @@ You can install the extension from the [webpage](https://marketplace.visualstudi
 
 ### Verify Kani harnesses
 
-With the extension, running Kani on a harness to verify it, is as simple as clicking a button.
-The following sections walk you through the first few actions you’ll need.
-We’ll walk you through using the extension’s core features to debug and finally verify the rectangle example mentioned above.
+With the extension, running Kani on a verification harness is as simple as clicking a button.
+In the following sections, we’ll walk you through using the extension’s core features to debug and finally verify the rectangle example mentioned above.
 
 #### View Kani harnesses
 
@@ -95,7 +94,7 @@ This is how the testing page looks like when you click on the panel.
 #### Run Kani harnesses
 
 You can then run your harnesses using the tree view by clicking the play button beside the harness that was automatically picked up by the Kani Extension.
-Once you run the harness using the extension, you are shown a failure banner if verification failed (or a green check mark if it succeeded).
+Once you run the harness using the extension, you are shown a green check mark if verification succeeded, or a failure banner if it failed.
 
 In our example, as with the command line, we can see through visual markers such as the failure banner pop-up and the red failure marker, that verification failed.
 
@@ -156,7 +155,7 @@ In our case, we can see that for `original.height = 0` , the larger rectangle’
 
 Now that we know that for `original.width = 0`, our assertion fails, we can repeat the experiment with explicit assumptions.
 The experiments should reveal that for all parameters, having a 0 value will cause the assertion to fail.
-Additionally, there is a problem if `factor` is `1` because in this case stretch will return `Some(...)` but the stretched rectangle will be the same size as the original.
+Additionally, there is a problem if `factor` is `1` because in this case `stretch` will return `Some(...)`, but the stretched rectangle will be the same size as the original.
 We missed these cases in our unit and property-based tests.
 
 We will now add these assumptions through `kani::assume` and re-run the verification in the extension.
@@ -169,7 +168,7 @@ And with that green check-mark, you can be assured that the harness has been ver
 ## Wrapping up
 
 You can use Kani natively in VS Code using the Kani VS Code extension, [available on the marketplace](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) now.
-We've seen how the VS Code extension can help you to iteratively verify properties of your code.
+In this post, we've seen how the VS Code extension can help you to iteratively verify properties of your code.
 The extension can run your Kani harnesses; generate unit tests that demonstrate property violations; and verify the harnesses.
 
 The Kani extension has more features which weren’t mentioned in the blog, that you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
