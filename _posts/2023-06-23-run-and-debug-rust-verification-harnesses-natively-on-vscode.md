@@ -3,7 +3,7 @@ layout: post
 title:  "Run and debug Rust verification harnesses natively on VS Code"
 ---
 
-Kani is a verification tool that can help you prove properties about your Rust code.
+Kani is a verification tool that can help you systematically test properties about your Rust code.
 To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
 In today’s blog post, we introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), available on the VS Code marketplace.
@@ -37,8 +37,8 @@ impl Rectangle {
 }
 ```
 
-In order to prove properties about the rectangle, we wrote a proof harness.
-The proof harness tried to prove that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions).
+In order to prove properties about the rectangle, we wrote a verification harness.
+The harness tried to prove that when the rectangle is stretched, it can hold another rectangle of its original size (dimensions).
 If proven, this means that for any given stretch factor and any height and width of the original rectangle, this property holds true.
 
 ```rust
@@ -56,7 +56,7 @@ pub fn stretched_rectangle_can_hold_original() {
 
 The current way of interacting with Kani is through the command line.
 Users invoke `cargo kani` and specify the harness they want to verify.
-Kani produces text-based output that tells you whether your proof has succeeded or failed.
+Kani produces text-based output that tells you whether your verification attempt has succeeded or failed.
 
 ```
 $ cargo kani --harness stretched_rectangle_can_hold_original
@@ -71,9 +71,9 @@ VERIFICATION:- FAILED
 
 ## Introducing the Kani VS Code Extension
 
-The Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug proofs.
+The Kani VS Code extension offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug harnesses.
 As you write Kani harnesses, the extension detects them and conveniently displays them within your testing panel.
-The extension offers detailed diagnostics, feedback about proof failures, error messages, and stack traces.
+The extension offers detailed diagnostics, feedback about verification failures, error messages, and stack traces.
 This empowers our users to find bugs and verify their code quicker.
 You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code window.
 
@@ -87,7 +87,7 @@ We’ll walk you through using the extension’s core features to debug and fina
 
 #### View Kani harnesses
 
-As soon as your Rust package is opened using the Kani extension in a VS Code instance, you should see the Kani proofs loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code.
+As soon as your Rust package is opened using the Kani extension in a VS Code instance, you should see the Kani harnesses loaded as regular unit tests in the Testing Panel on the [primary side bar](https://code.visualstudio.com/api/ux-guidelines/sidebars#primary-sidebar) of VS Code.
 This is how the testing page looks like when you click on the panel.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/view-kani-harnesses.png" alt="view-kani-harnesses" />
