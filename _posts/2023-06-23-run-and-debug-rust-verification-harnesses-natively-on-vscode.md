@@ -104,7 +104,7 @@ You are then presented with two options:
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-kani-harness.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-kani-harness" />
 
 Kani's [concrete playback](https://model-checking.github.io/kani-verifier-blog/2022/09/22/internship-projects-2022-concrete-playback.html) feature allows you to generate unit tests that call a function with the exact arguments that caused the assertion violation.
-The VSCode extension makes using concrete playback easy.
+The VS Code extension makes using concrete playback easy.
 You can read more about concrete playback in our [documentation](https://model-checking.github.io/kani/debugging-verification-failures.html).
 
 ### Generate a counterexample unit test
@@ -113,7 +113,7 @@ Next, we’ll generate the unit test by clicking on the `Run Concrete Playback f
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/generate-counter-example.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="generate-unit-test" />
 
-By simply clicking on a link, we have our counterexample unit test pasted directly below the harness.
+By clicking on the link, we have our counterexample unit test pasted directly below the harness.
 This is what the unit test looks like:
 
 ```rust
@@ -168,7 +168,7 @@ You can use Kani through VS Code using the Kani VS Code extension, [available on
 With this new extension you can now iteratively verify your code directly in the VS Code UI.
 It lets you verify harnesses with a simple click, highlights property violations, lets you generate unit tests and debug them
 
-The Kani extension has more features which weren’t mentioned in the blog, that you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
+The Kani extension has more features which weren’t mentioned in the blog, which you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
 
 Please go ahead and try the extension yourself!
 
