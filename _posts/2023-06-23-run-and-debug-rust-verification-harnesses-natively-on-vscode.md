@@ -6,22 +6,17 @@ title:  "Run and debug Rust verification harnesses from VS Code"
 Kani is a verification tool that can help you systematically test properties about your Rust code.
 To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
-We are delighted to introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), which is now available on the VS Code marketplace.
-To allow a more comfortable verification experience, Kani is now usable from the VS Code user interface.
-The extension automatically detects all harnesses within the package, and allows you to run and debug them directly in VS Code.
-Until now, developers could only run and debug harnesses via a command-line interface.
-
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
-
 ## Introducing the Kani VS Code Extension
 
-The [Kani VS Code extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) offers a hassle-free and seamless integration into Visual Studio Code, making it more convenient to write and debug harnesses.
+We are delighted to introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), which is now available on the VS Code marketplace.
 As you write Kani harnesses, the extension detects them and conveniently displays them within your testing panel.
 The extension offers detailed diagnostics, feedback about verification failures, error messages, and stack traces.
 This empowers you to find bugs and verify their code quicker.
 You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code window.
 
-## A Simple Example
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
+
+## Working through a simple example
 
 To show some of the features in the extension, we will work through a familiar example, the rectangle example that we introduced in our [first blog post](https://model-checking.github.io/kani-verifier-blog/2022/05/04/announcing-the-kani-rust-verifier-project.html).
 
@@ -60,7 +55,7 @@ pub fn stretched_rectangle_can_hold_original() {
 }
 ```
 
-#### How Kani is used currently
+### How Kani is used currently
 
 The current way of interacting with Kani is through the command line.
 Users invoke `cargo kani` and specify the harness they want to verify.
