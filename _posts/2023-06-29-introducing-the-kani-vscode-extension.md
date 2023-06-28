@@ -124,7 +124,7 @@ By setting breakpoints and clicking the `Debug Test (Kani)` button, you are take
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/run-debugger.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="run-debugger" />
 
-In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays 0, which shows that for that counterexample, the property `can_hold` does not hold.
+In our case, we can see that for `original.height = 0` , the larger rectangle’s height or `larger.height` also stays `0`, which shows that for that counterexample, the property `can_hold` does not hold.
 
 ### And finally, verify the harness with the right assumptions
 
