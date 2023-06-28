@@ -1,17 +1,16 @@
 ---
 layout: post
-title:  "Run and debug Rust verification harnesses from VS Code"
+title:  "Introducing the Kani VS Code Extension"
 ---
 
 Kani is a verification tool that can help you systematically test properties about your Rust code.
 To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
-## Introducing the Kani VS Code Extension
-
 We are delighted to introduce the [Kani VS Code Extension](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension), which is now available on the VS Code marketplace.
+The extension integrates the Kani verifier into the VS Code UI.
 As you write Kani harnesses, the extension detects them and conveniently displays them within your testing panel.
 The extension offers detailed diagnostics, feedback about verification failures, error messages, and stack traces.
-This empowers you to find bugs and verify their code quicker.
+This empowers you to find bugs and verify your code quicker.
 You can install the extension from the [webpage](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) on VS Code marketplace or by searching for `Kani` in the extensions tab of your VS Code window.
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/vs-code-images/kani-demo.gif" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);" alt="view-kani-demo" />
@@ -55,24 +54,7 @@ pub fn stretched_rectangle_can_hold_original() {
 }
 ```
 
-### How Kani is used currently
-
-The current way of interacting with Kani is through the command line.
-Users invoke `cargo kani` and specify the harness they want to verify.
-Kani produces text-based output that tells you whether your verification attempt has succeeded or failed.
-
-```
-$ cargo kani --harness stretched_rectangle_can_hold_original
-# --snip--
-Check 2: verification::stretched_rectangle_can_hold_original.assertion.1
-         - Status: FAILURE
-         - Description: "assertion failed: larger.can_hold(&original)"
-         - Location: src/main.rs:36:13 in function verification::stretched_rectangle_can_hold_original
-# --snip--
-VERIFICATION:- FAILED
-```
-
-## Using the VS Code extension
+## Using the VS Code extension on the example
 
 With the extension, running Kani on a verification harness, is as simple as clicking a button.
 In the following sections, we’ll walk you through using the extension’s core features to debug and finally verify the rectangle example mentioned above.
@@ -161,7 +143,7 @@ And with that green check mark, you can be assured that the harness has been ver
 
 You can use Kani through VS Code using the Kani VS Code extension, [available on the marketplace](https://marketplace.visualstudio.com/items?itemName=model-checking.kani-vscode-extension) now.
 With this new extension you can now iteratively verify your code directly in the VS Code UI.
-It lets you verify harnesses with a simple click, highlights property violations, lets you generate unit tests and debug them
+It lets you verify harnesses with a simple click, highlights property violations, lets you generate unit tests and debug them.
 
 The Kani extension has more features which weren’t mentioned in the blog, which you can read about in our [user guide documentation](https://github.com/model-checking/kani-vscode-extension/blob/main/docs/user-guide.md).
 
