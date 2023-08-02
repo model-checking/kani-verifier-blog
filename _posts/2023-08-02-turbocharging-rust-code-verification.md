@@ -106,11 +106,11 @@ Kani can now perform the MIR-to-GOTO code generation and GOTO binary export 4x f
 
 The table below reports total time and memory consumption when running `kani --tests --only-codegen` with `kani-0.33.3` for three crates of the `s2n-quic` project, with JSON symbol table export versus GOTO binary export.
 
-| Crate                | User time (JSON) | User time (GOTO bin.) | Peak Mem. (JSON) | Peak Mem. (GOTO bin.) |
-| -------------------  | ---------------: | --------------------: | ---------------: | --------------------: |
-| `s2n-quic-core`      |             198s |              **111s** |        **669Mb** |                 815Mb |
-| `s2n-quic-platform`  |              99s |               **91s** |        **449Mb** |                 450Mb |
-| `s2n-quic-xdp`       |              92s |               **95s** |        **450Mb** |                 450Mb |
+| Crate               | User time (JSON) | User time (GOTO bin.) | Peak Mem. (JSON) | Peak Mem. (GOTO bin.) |
+| ------------------- | ---------------: | --------------------: | ---------------: | --------------------: |
+| `s2n-quic-core`     |             198s |              **111s** |        **669MB** |                 815MB |
+| `s2n-quic-platform` |              99s |               **91s** |        **449MB** |                 450MB |
+| `s2n-quic-xdp`      |              92s |               **95s** |        **450MB** |                 450MB |
 
 
 For `s2n-quic-core`, which contains 37 verification harnesses, we observe a reduction of 45% of *User time* from 199s down to 111s, and a 20% memory consumption increase from ~670Mb to ~815Mb.
@@ -130,51 +130,51 @@ Detailed GOTO codegen and export times table
 </summary>
 <div markdown=1>
 
-| Harness                                                     | GOTO codegen time (s) | JSON export (s) | GOTO-binary export (s) | export speedup | codegen + export speedup |
+| verification harness                                        | GOTO codegen time (s) | JSON export (s) | GOTO-binary export (s) | export speedup | codegen + export speedup |
 | ----------------------------------------------------------- | --------------------: | --------------: | ---------------------: | -------------: | -----------------------: |
-| `ct::tests::ct_ge...`                                       |                  0,32 |            1,48 |               **0,17** |           8,70 |                     3,67 |
-| `ct::tests::ct_gt...`                                       |                  0,26 |            1,32 |               **0,14** |           9,42 |                     3,95 |
-| `ct::tests::ct_le...`                                       |                  0,26 |            1,32 |               **0,14** |           9,42 |                     3,95 |
-| `ct::tests::ct_lt...`                                       |                  0,26 |            1,33 |               **0,14** |           9,50 |                     3,97 |
-| `ct::tests::rem...`                                         |                  0,26 |            1,32 |               **0,16** |           8,25 |                     3,76 |
-| `ct::tests::sub...`                                         |                  0,26 |            1,33 |               **0,14** |           9,50 |                     3,97 |
-| `ct::tests::div...`                                         |                  0,26 |            1,33 |               **0,14** |           9,50 |                     3,97 |
-| `ct::tests::add...`                                         |                  0,26 |            1,33 |               **0,14** |           9,50 |                     3,97 |
-| `ct::tests::mul...`                                         |                  0,26 |            1,32 |               **0,14** |           9,42 |                     3,95 |
-| `frame::crypto::tests::try_fit_test...`                     |                  0,66 |            3,31 |               **0,39** |           8,48 |                     3,78 |
-| `frame::stream::tests::try_fit_test...`                     |                  0,67 |            3,44 |               **0,38** |           9,05 |                     3,91 |
-| `inet::checksum::tests::differential...`                    |                  0,51 |            2,46 |               **0,26** |           9,46 |                     3,85 |
-| `inet::ipv4::tests::header_getter_setter_test...`           |                  0,44 |            2,11 |               **0,22** |           9,59 |                     3,86 |
-| `inet::ipv4::tests::scope_test...`                          |                  1,01 |            5,18 |               **0,56** |           9,25 |                     3,94 |
-| `inet::ipv6::tests::header_getter_setter_test...`           |                  0,44 |            2,17 |               **0,23** |           9,43 |                     3,89 |
-| `inet::ipv6::tests::scope_test...`                          |                  1,08 |            5,34 |               **0,59** |           9,05 |                     3,84 |
-| `interval_set::tests::interval_set_inset_range_test...`     |                  0,83 |             4,3 |               **0,45** |           9,55 |                     4,00 |
-| `packet::number::map::tests::insert_value...`               |                  0,28 |            1,49 |               **0,16** |           9,31 |                     4,02 |
-| `packet::number::sliding_window::test::insert_test...`      |                  0,86 |            4,22 |               **0,46** |           9,17 |                     3,84 |
-| `packet::number::tests::example_test...`                    |                  1,09 |            5,67 |               **0,59** |           9,61 |                     4,02 |
-| `packet::number::tests::rfc_differential_test...`           |                  0,30 |            1,62 |               **0,18** |           9,40 |                      4.0 |
-| `packet::number::tests::truncate_expand_test...`            |                  0,63 |            3,23 |               **0,35** |           9,22 |                      3,9 |
-| `packet::number::tests::round_trip...`                      |                  0,22 |            1,18 |               **0,13** |           9,00 |                     4,00 |
-| `random::tests::gen_range_biased_test...`                   |                  0,31 |            1,58 |               **0,18** |           8,77 |                     3,85 |
-| `recovery::rtt_estimator::test::weighted_average_test...`   |                  0,43 |            2,23 |               **0,24** |           9,29 |                     3,97 |
-| `slice::tests::vectored_copy_fuzz_test...`                  |                  0,73 |            3,33 |               **0,35** |           9,51 |                     3,75 |
-| `stream::iter::fuzz_target::fuzz_builder...`                |                  0,26 |            1,35 |               **0,14** |           9,64 |                     4,02 |
-| `sync::cursor::tests::oracle_test...`                       |                  0,92 |            4,41 |               **0,46** |           9,58 |                     3,86 |
-| `sync::spsc::tests::alloc_test...`                          |                  0,82 |            4,15 |               **0,45** |           9,22 |                     3,91 |
-| `varint::tests::checked_ops_test...`                        |                  0,95 |            4,94 |               **0,55** |           8,98 |                     3,92 |
-| `varint::tests::table_differential_test...`                 |                  0,95 |            4,93 |               **0,51** |           9,66 |                     4,02 |
-| `varint::tests::eight_byte_sequence_test...`                |                  0,96 |            4,97 |               **0,52** |           9,55 |                     4,00 |
-| `varint::tests::four_byte_sequence_test...`                 |                  0,95 |            4,95 |               **0,52** |           9,51 |                     4,01 |
-| `varint::tests::two_byte_sequence_test...`                  |                  0,97 |            4,98 |               **0,52** |           9,57 |                     3,99 |
-| `varint::tests::one_byte_sequence_test...`                  |                  0,25 |            1,32 |               **0,14** |           9,42 |                     4,02 |
-| `varint::tests::round_trip_values_test...`                  |                  0,27 |            1,38 |               **0,15** |           9,20 |                     3,92 |
-| `xdp::decoder::tests::decode_test...`                       |                  0,58 |            2,93 |               **0,31** |           9,45 |                     3,94 |
-| `message::cmsg::tests::round_trip_test...`                  |                  0,37 |            1,59 |               **0,19** |           8,36 |                     3,50 |
-| `message::cmsg::tests::iter_test...`                        |                  0,77 |            3,75 |               **0,41** |           9,14 |                     3,83 |
-| `message::msg::tests::address_inverse_pair_test...`         |                  0,85 |            4,07 |               **0,43** |           9,46 |                     3,84 |
-| `task::completion_to_tx::assign::tests::assignment_test...` |                  0,36 |            1,48 |               **0,17** |           8,70 |                     3,47 |
+| `ct::tests::ct_ge...`                                       |                  0.32 |            1.48 |               **0.17** |           8.70 |                     3.67 |
+| `ct::tests::ct_gt...`                                       |                  0.26 |            1.32 |               **0.14** |           9.42 |                     3.95 |
+| `ct::tests::ct_le...`                                       |                  0.26 |            1.32 |               **0.14** |           9.42 |                     3.95 |
+| `ct::tests::ct_lt...`                                       |                  0.26 |            1.33 |               **0.14** |           9.50 |                     3.97 |
+| `ct::tests::rem...`                                         |                  0.26 |            1.32 |               **0.16** |           8.25 |                     3.76 |
+| `ct::tests::sub...`                                         |                  0.26 |            1.33 |               **0.14** |           9.50 |                     3.97 |
+| `ct::tests::div...`                                         |                  0.26 |            1.33 |               **0.14** |           9.50 |                     3.97 |
+| `ct::tests::add...`                                         |                  0.26 |            1.33 |               **0.14** |           9.50 |                     3.97 |
+| `ct::tests::mul...`                                         |                  0.26 |            1.32 |               **0.14** |           9.42 |                     3.95 |
+| `frame::crypto::tests::try_fit_test...`                     |                  0.66 |            3.31 |               **0.39** |           8.48 |                     3.78 |
+| `frame::stream::tests::try_fit_test...`                     |                  0.67 |            3.44 |               **0.38** |           9.05 |                     3.91 |
+| `inet::checksum::tests::differential...`                    |                  0.51 |            2.46 |               **0.26** |           9.46 |                     3.85 |
+| `inet::ipv4::tests::header_getter_setter_test...`           |                  0.44 |            2.11 |               **0.22** |           9.59 |                     3.86 |
+| `inet::ipv4::tests::scope_test...`                          |                  1.01 |            5.18 |               **0.56** |           9.25 |                     3.94 |
+| `inet::ipv6::tests::header_getter_setter_test...`           |                  0.44 |            2.17 |               **0.23** |           9.43 |                     3.89 |
+| `inet::ipv6::tests::scope_test...`                          |                  1.08 |            5.34 |               **0.59** |           9.05 |                     3.84 |
+| `interval_set::tests::interval_set_inset_range_test...`     |                  0.83 |             4.3 |               **0.45** |           9.55 |                     4.00 |
+| `packet::number::map::tests::insert_value...`               |                  0.28 |            1.49 |               **0.16** |           9.31 |                     4.02 |
+| `packet::number::sliding_window::test::insert_test...`      |                  0.86 |            4.22 |               **0.46** |           9.17 |                     3.84 |
+| `packet::number::tests::example_test...`                    |                  1.09 |            5.67 |               **0.59** |           9.61 |                     4.02 |
+| `packet::number::tests::rfc_differential_test...`           |                  0.30 |            1.62 |               **0.18** |           9.40 |                      4.0 |
+| `packet::number::tests::truncate_expand_test...`            |                  0.63 |            3.23 |               **0.35** |           9.22 |                      3.9 |
+| `packet::number::tests::round_trip...`                      |                  0.22 |            1.18 |               **0.13** |           9.00 |                     4.00 |
+| `random::tests::gen_range_biased_test...`                   |                  0.31 |            1.58 |               **0.18** |           8.77 |                     3.85 |
+| `recovery::rtt_estimator::test::weighted_average_test...`   |                  0.43 |            2.23 |               **0.24** |           9.29 |                     3.97 |
+| `slice::tests::vectored_copy_fuzz_test...`                  |                  0.73 |            3.33 |               **0.35** |           9.51 |                     3.75 |
+| `stream::iter::fuzz_target::fuzz_builder...`                |                  0.26 |            1.35 |               **0.14** |           9.64 |                     4.02 |
+| `sync::cursor::tests::oracle_test...`                       |                  0.92 |            4.41 |               **0.46** |           9.58 |                     3.86 |
+| `sync::spsc::tests::alloc_test...`                          |                  0.82 |            4.15 |               **0.45** |           9.22 |                     3.91 |
+| `varint::tests::checked_ops_test...`                        |                  0.95 |            4.94 |               **0.55** |           8.98 |                     3.92 |
+| `varint::tests::table_differential_test...`                 |                  0.95 |            4.93 |               **0.51** |           9.66 |                     4.02 |
+| `varint::tests::eight_byte_sequence_test...`                |                  0.96 |            4.97 |               **0.52** |           9.55 |                     4.00 |
+| `varint::tests::four_byte_sequence_test...`                 |                  0.95 |            4.95 |               **0.52** |           9.51 |                     4.01 |
+| `varint::tests::two_byte_sequence_test...`                  |                  0.97 |            4.98 |               **0.52** |           9.57 |                     3.99 |
+| `varint::tests::one_byte_sequence_test...`                  |                  0.25 |            1.32 |               **0.14** |           9.42 |                     4.02 |
+| `varint::tests::round_trip_values_test...`                  |                  0.27 |            1.38 |               **0.15** |           9.20 |                     3.92 |
+| `xdp::decoder::tests::decode_test...`                       |                  0.58 |            2.93 |               **0.31** |           9.45 |                     3.94 |
+| `message::cmsg::tests::round_trip_test...`                  |                  0.37 |            1.59 |               **0.19** |           8.36 |                     3.50 |
+| `message::cmsg::tests::iter_test...`                        |                  0.77 |            3.75 |               **0.41** |           9.14 |                     3.83 |
+| `message::msg::tests::address_inverse_pair_test...`         |                  0.85 |            4.07 |               **0.43** |           9.46 |                     3.84 |
+| `task::completion_to_tx::assign::tests::assignment_test...` |                  0.36 |            1.48 |               **0.17** |           8.70 |                     3.47 |
 |                                                             |             **Total** |       **Total** |              **Total** |        **Avg** |                  **Avg** |
-|                                                             |                  22,8 |          114,66 |              **12,33** |           9,29 |                     3,90 |
+|                                                             |                  22.8 |          114.66 |              **12.33** |           9.29 |                     3.90 |
 
 </div>
 </details>
@@ -256,7 +256,7 @@ This new CBMC feature vastly improved performance for Rust programs manipulating
 The following tables and plots were obtained by running the kani `perf` test suite with `kani 0.33.0`, `cbmc 5.88.1` with `cadical` as default SAT solver for all tests, a timeout of 900s, with and without applying the union-field sensitivity transform.
 
 
-| verification Harness                      | no-sens | sens | change          |
+| verification harness               | no-sens | sens | change          |
 | ---------------------------------- | ------- | ---- | --------------- |
 | btreeset/insert_any/main           | False   | True | ✅ newly passing |
 | btreeset/insert_multi/insert_multi | False   | True | ✅ newly passing |
@@ -278,66 +278,66 @@ Detailed total time table
 
 <div markdown=1>
 
-| verification Harness                                                                          | no-sens   | sens      | best      | change   |
-| -------------------------------------------------------------------------------------- | --------- | --------- | --------- | -------- |
-| misc/struct_defs/fast_harness                                                          | 900       | 0,89      | 0,89      | -99,9%   |
-| misc/display_trait/slow                                                                | 900       | 2,67      | 2,67      | -99,703% |
-| misc/struct_defs/slow_harness2                                                         | 66,72     | 0,24      | 0,24      | -99,631% |
-| btreeset/insert_any/main                                                               | 900       | 5,14      | 5,14      | -99,429% |
-| misc/struct_defs/slow_harness1                                                         | 20,33     | 0,21      | 0,21      | -98,925% |
-| vec/box_dyn/main                                                                       | 97,24     | 1,79      | 1,79      | -98,154% |
-| btreeset/insert_same/main                                                              | 900       | 16,65     | 16,65     | -98,149% |
-| btreeset/insert_multi/insert_multi                                                     | 900       | 19,87     | 19,87     | -97,791% |
-| vec/string/main                                                                        | 142,38    | 4,02      | 4,02      | -97,173% |
-| s2n-quic/quic/s2n-quic-core/inet::checksum::tests::differential                        | 66,29     | 26,03     | 26,03     | -60,724% |
-| s2n-quic/quic/s2n-quic-core/interval_set::tests::interval_set_inset_range_test         | 4,88      | 3,87      | 3,87      | -20,684% |
-| s2n-quic/quic/s2n-quic-core/ct::tests::rem                                             | 1,33      | 1,11      | 1,11      | -16,406% |
-| s2n-quic/quic/s2n-quic-core/ct::tests::div                                             | 1,15      | 0,98      | 0,98      | -14,491% |
-| misc/display_trait/fast                                                                | 2,43      | 2,13      | 2,13      | -12,386% |
-| s2n-quic/quic/s2n-quic-core/frame::crypto::tests::try_fit_test                         | 8,9       | 7,9       | 7,9       | -11,219% |
-| s2n-quic/quic/s2n-quic-core/frame::stream::tests::try_fit_test                         | 41,29     | 36,83     | 36,83     | -10,801% |
-| s2n-quic/quic/s2n-quic-core/packet::number::tests::truncate_expand_test                | 2,75      | 2,59      | 2,59      | -5,906%  |
-| s2n-quic/quic/s2n-quic-core/varint::tests::table_differential_test                     | 1,15      | 1,08      | 1,08      | -5,83%   |
-| s2n-quic/quic/s2n-quic-core/varint::tests::round_trip_values_test                      | 19,27     | 18,15     | 18,15     | -5,79%   |
-| s2n-quic/tools/xdp/s2n-quic-xdp/task::completion_to_tx::assign::tests::assignment_test | 47,06     | 44,53     | 44,53     | -5,378%  |
-| s2n-quic/quic/s2n-quic-core/slice::tests::vectored_copy_fuzz_test                      | 81,54     | 77,71     | 77,71     | -4,705%  |
-| s2n-quic/quic/s2n-quic-core/packet::number::tests::example_test                        | 0,38      | 0,36      | 0,36      | -4,474%  |
-| s2n-quic/quic/s2n-quic-core/sync::cursor::tests::oracle_test                           | 474,06    | 459,59    | 459,59    | -3,052%  |
-| format/fmt_i8                                                                          | 43,83     | 42,94     | 42,94     | -2,032%  |
-| misc/array_fold/array_sum_fold_proof                                                   | 0,93      | 0,92      | 0,92      | -1,416%  |
-| s2n-quic/quic/s2n-quic-core/packet::number::tests::rfc_differential_test               | 3,89      | 3,85      | 3,85      | -1,119%  |
-| s2n-quic/quic/s2n-quic-platform/message::cmsg::tests::iter_test                        | 19,5      | 19,33     | 19,33     | -0,865%  |
-| s2n-quic/quic/s2n-quic-core/ct::tests::mul                                             | 0,75      | 0,75      | 0,75      | -0,285%  |
-| s2n-quic/quic/s2n-quic-core/packet::number::map::tests::insert_value                   | 2,62      | 2,65      | 2,62      | 1,196%   |
-| vec/vec/main                                                                           | 2,18      | 2,21      | 2,18      | 1,742%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::add                                             | 0,68      | 0,69      | 0,68      | 2,447%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::ct_gt                                           | 0,63      | 0,65      | 0,63      | 2,727%   |
-| s2n-quic/quic/s2n-quic-core/inet::ipv4::tests::scope_test                              | 4,25      | 4,38      | 4,25      | 3,238%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::sub                                             | 0,67      | 0,69      | 0,67      | 3,454%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::ct_lt                                           | 0,63      | 0,65      | 0,63      | 3,998%   |
-| s2n-quic/quic/s2n-quic-core/packet::number::tests::round_trip                          | 19,38     | 20,2      | 19,38     | 4,212%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::ct_le                                           | 0,62      | 0,65      | 0,62      | 4,286%   |
-| s2n-quic/quic/s2n-quic-core/ct::tests::ct_ge                                           | 0,62      | 0,65      | 0,62      | 4,939%   |
-| s2n-quic/quic/s2n-quic-core/varint::tests::eight_byte_sequence_test                    | 13,66     | 14,37     | 13,66     | 5,166%   |
-| s2n-quic/quic/s2n-quic-core/stream::iter::fuzz_target::fuzz_builder                    | 0,82      | 0,87      | 0,82      | 6,349%   |
-| s2n-quic/quic/s2n-quic-core/packet::number::sliding_window::test::insert_test          | 1,46      | 1,55      | 1,46      | 6,566%   |
-| s2n-quic/quic/s2n-quic-core/inet::ipv4::tests::header_getter_setter_test               | 19,59     | 21,04     | 19,59     | 7,365%   |
-| s2n-quic/quic/s2n-quic-platform/message::cmsg::tests::round_trip_test                  | 463,27    | 497,46    | 463,27    | 7,38%    |
-| misc/array_fold/array_sum_for_proof                                                    | 0,86      | 0,95      | 0,86      | 9,393%   |
-| s2n-quic/quic/s2n-quic-core/inet::ipv6::tests::scope_test                              | 16,4      | 17,95     | 16,4      | 9,491%   |
-| s2n-quic/quic/s2n-quic-core/inet::ipv6::tests::header_getter_setter_test               | 48,89     | 53,53     | 48,89     | 9,492%   |
-| s2n-quic/quic/s2n-quic-core/recovery::rtt_estimator::test::weighted_average_test       | 117,62    | 129,32    | 117,62    | 9,943%   |
-| s2n-quic/quic/s2n-quic-core/varint::tests::checked_ops_test                            | 2,49      | 2,76      | 2,49      | 11,022%  |
-| s2n-quic/quic/s2n-quic-core/varint::tests::two_byte_sequence_test                      | 11,21     | 12,5      | 11,21     | 11,501%  |
-| s2n-quic/quic/s2n-quic-core/varint::tests::four_byte_sequence_test                     | 11,64     | 14,06     | 11,64     | 20,729%  |
-| s2n-quic/quic/s2n-quic-core/varint::tests::one_byte_sequence_test                      | 8,76      | 10,82     | 8,76      | 23,515%  |
-| format/fmt_u8                                                                          | 9,41      | 12,06     | 9,41      | 28,233%  |
-| s2n-quic/quic/s2n-quic-core/sync::spsc::tests::alloc_test                              | 92,84     | 126,45    | 92,84     | 36,206%  |
-| s2n-quic/quic/s2n-quic-core/random::tests::gen_range_biased_test                       | 10,48     | 14,76     | 10,48     | 40,818%  |
-| s2n-quic/quic/s2n-quic-core/xdp::decoder::tests::decode_test                           | 5,17      | 7,59      | 5,17      | 46,713%  |
-| s2n-quic/quic/s2n-quic-platform/message::msg::tests::address_inverse_pair_test         | 7,09      | 10,98     | 7,09      | 54,841   |
-|                                                                                        | **total** | **total** | **total** |          |
-|                                                                                        | 6521,99   | 1784,57   | 1676,07   |          |
+| Verification harness                                                                   | no-sens   | sens      | best      | change |
+| -------------------------------------------------------------------------------------- | --------- | --------- | --------- | ------ |
+| misc/struct_defs/fast_harness                                                          | 900.00    | 0.89      | 0.89      | -99.9% |
+| misc/display_trait/slow                                                                | 900.00    | 2.67      | 2.67      | -99.7% |
+| misc/struct_defs/slow_harness2                                                         | 66.72     | 0.24      | 0.24      | -99.6% |
+| btreeset/insert_any/main                                                               | 900       | 5.14      | 5.14      | -99.4% |
+| misc/struct_defs/slow_harness1                                                         | 20.33     | 0.21      | 0.21      | -98.9% |
+| vec/box_dyn/main                                                                       | 97.24     | 1.79      | 1.79      | -98.1% |
+| btreeset/insert_same/main                                                              | 900       | 16.65     | 16.65     | -98.1% |
+| btreeset/insert_multi/insert_multi                                                     | 900       | 19.87     | 19.87     | -97.7% |
+| vec/string/main                                                                        | 142.38    | 4.02      | 4.02      | -97.1% |
+| s2n-quic/quic/s2n-quic-core/inet::checksum::tests::differential                        | 66.29     | 26.03     | 26.03     | -60.7% |
+| s2n-quic/quic/s2n-quic-core/interval_set::tests::interval_set_inset_range_test         | 4.88      | 3.87      | 3.87      | -20.6% |
+| s2n-quic/quic/s2n-quic-core/ct::tests::rem                                             | 1.33      | 1.11      | 1.11      | -16.4% |
+| s2n-quic/quic/s2n-quic-core/ct::tests::div                                             | 1.15      | 0.98      | 0.98      | -14.4% |
+| misc/display_trait/fast                                                                | 2.43      | 2.13      | 2.13      | -12.3% |
+| s2n-quic/quic/s2n-quic-core/frame::crypto::tests::try_fit_test                         | 8.9       | 7.9       | 7.9       | -11.2% |
+| s2n-quic/quic/s2n-quic-core/frame::stream::tests::try_fit_test                         | 41.29     | 36.83     | 36.83     | -10.8% |
+| s2n-quic/quic/s2n-quic-core/packet::number::tests::truncate_expand_test                | 2.75      | 2.59      | 2.59      | -5.9%  |
+| s2n-quic/quic/s2n-quic-core/varint::tests::table_differential_test                     | 1.15      | 1.08      | 1.08      | -5.8%  |
+| s2n-quic/quic/s2n-quic-core/varint::tests::round_trip_values_test                      | 19.27     | 18.15     | 18.15     | -5.7%  |
+| s2n-quic/tools/xdp/s2n-quic-xdp/task::completion_to_tx::assign::tests::assignment_test | 47.06     | 44.53     | 44.53     | -5.3%  |
+| s2n-quic/quic/s2n-quic-core/slice::tests::vectored_copy_fuzz_test                      | 81.54     | 77.71     | 77.71     | -4.7%  |
+| s2n-quic/quic/s2n-quic-core/packet::number::tests::example_test                        | 0.38      | 0.36      | 0.36      | -4.4%  |
+| s2n-quic/quic/s2n-quic-core/sync::cursor::tests::oracle_test                           | 474.06    | 459.59    | 459.59    | -3.0%  |
+| format/fmt_i8                                                                          | 43.83     | 42.94     | 42.94     | -2.0%  |
+| misc/array_fold/array_sum_fold_proof                                                   | 0.93      | 0.92      | 0.92      | -1.4%  |
+| s2n-quic/quic/s2n-quic-core/packet::number::tests::rfc_differential_test               | 3.89      | 3.85      | 3.85      | -1.1%  |
+| s2n-quic/quic/s2n-quic-platform/message::cmsg::tests::iter_test                        | 19.5      | 19.33     | 19.33     | -0.8%  |
+| s2n-quic/quic/s2n-quic-core/ct::tests::mul                                             | 0.75      | 0.75      | 0.75      | -0.2%  |
+| s2n-quic/quic/s2n-quic-core/packet::number::map::tests::insert_value                   | 2.62      | 2.65      | 2.62      | 1.1%   |
+| vec/vec/main                                                                           | 2.18      | 2.21      | 2.18      | 1.7%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::add                                             | 0.68      | 0.69      | 0.68      | 2.4%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::ct_gt                                           | 0.63      | 0.65      | 0.63      | 2.7%   |
+| s2n-quic/quic/s2n-quic-core/inet::ipv4::tests::scope_test                              | 4.25      | 4.38      | 4.25      | 3.2%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::sub                                             | 0.67      | 0.69      | 0.67      | 3.4%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::ct_lt                                           | 0.63      | 0.65      | 0.63      | 3.9%   |
+| s2n-quic/quic/s2n-quic-core/packet::number::tests::round_trip                          | 19.38     | 20.2      | 19.38     | 4.2%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::ct_le                                           | 0.62      | 0.65      | 0.62      | 4.2%   |
+| s2n-quic/quic/s2n-quic-core/ct::tests::ct_ge                                           | 0.62      | 0.65      | 0.62      | 4.9%   |
+| s2n-quic/quic/s2n-quic-core/varint::tests::eight_byte_sequence_test                    | 13.66     | 14.37     | 13.66     | 5.1%   |
+| s2n-quic/quic/s2n-quic-core/stream::iter::fuzz_target::fuzz_builder                    | 0.82      | 0.87      | 0.82      | 6.3%   |
+| s2n-quic/quic/s2n-quic-core/packet::number::sliding_window::test::insert_test          | 1.46      | 1.55      | 1.46      | 6.5%   |
+| s2n-quic/quic/s2n-quic-core/inet::ipv4::tests::header_getter_setter_test               | 19.59     | 21.04     | 19.59     | 7.3%   |
+| s2n-quic/quic/s2n-quic-platform/message::cmsg::tests::round_trip_test                  | 463.27    | 497.46    | 463.27    | 7.3%   |
+| misc/array_fold/array_sum_for_proof                                                    | 0.86      | 0.95      | 0.86      | 9.3%   |
+| s2n-quic/quic/s2n-quic-core/inet::ipv6::tests::scope_test                              | 16.4      | 17.95     | 16.4      | 9.4%   |
+| s2n-quic/quic/s2n-quic-core/inet::ipv6::tests::header_getter_setter_test               | 48.89     | 53.53     | 48.89     | 9.4%   |
+| s2n-quic/quic/s2n-quic-core/recovery::rtt_estimator::test::weighted_average_test       | 117.62    | 129.32    | 117.62    | 9.9%   |
+| s2n-quic/quic/s2n-quic-core/varint::tests::checked_ops_test                            | 2.49      | 2.76      | 2.49      | 11.0%  |
+| s2n-quic/quic/s2n-quic-core/varint::tests::two_byte_sequence_test                      | 11.21     | 12.5      | 11.21     | 11.5%  |
+| s2n-quic/quic/s2n-quic-core/varint::tests::four_byte_sequence_test                     | 11.64     | 14.06     | 11.64     | 20.7%  |
+| s2n-quic/quic/s2n-quic-core/varint::tests::one_byte_sequence_test                      | 8.76      | 10.82     | 8.76      | 23.5%  |
+| format/fmt_u8                                                                          | 9.41      | 12.06     | 9.41      | 28.2%  |
+| s2n-quic/quic/s2n-quic-core/sync::spsc::tests::alloc_test                              | 92.84     | 126.45    | 92.84     | 36.2%  |
+| s2n-quic/quic/s2n-quic-core/random::tests::gen_range_biased_test                       | 10.48     | 14.76     | 10.48     | 40.8%  |
+| s2n-quic/quic/s2n-quic-core/xdp::decoder::tests::decode_test                           | 5.17      | 7.59      | 5.17      | 46.7%  |
+| s2n-quic/quic/s2n-quic-platform/message::msg::tests::address_inverse_pair_test         | 7.09      | 10.98     | 7.09      | 54.8   |
+|                                                                                        | **total** | **total** | **total** |        |
+|                                                                                        | 6521.99   | 1784.57   | 1676.07   |        |
 
 </div>
 </details>
