@@ -443,4 +443,4 @@ In conclusion, we would like to point out the multi-faceted approach to optimizi
 Some optimizations are geared towards solving unsolvable cases whereas others are more general in nature.
 A reflection of the difficult problem space we are dealing with.
 Specific tools can achieve better performance with niche optimizations, but tools like Kani have to be optimized at various levels to achieve realistic performant verification.
-We hope you enjoyed the blog post and get a sense of the need for a multi-faceted approach !
+We hope you enjoyed the blog post and get a sense of the need for a multi-faceted approach!
