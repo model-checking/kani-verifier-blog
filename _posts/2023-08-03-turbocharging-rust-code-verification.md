@@ -44,8 +44,6 @@ Finally, Kani ships with a crate (named `kani`) that provides a set of APIs that
 
 Note that the verification problem is computationally hard. Thus, some optimizations can have a positive effect only on a subset of harnesses, while other optimizations can bring benefits overall. Kani was designed to provide a good out-of-the box experience, but also to allow experimentation and further customization to achieve an optimal performance for each harness.
 
-[^build-details]: To verify [Cargo](https://doc.rust-lang.org/stable/cargo/) packages, Kani employs Cargo to correctly build all the dependencies before translating them to GOTO programs.
-
 ## Supporting Multiple SAT Solvers
 
 SAT solving is typically the most time-consuming part of a Kani run. There is a large number of SAT solvers available, whose performance can vary widely depending on the specific type of formula, and it can be very helpful to be able to try different SAT solvers on the same problem to determine which one performs best.
@@ -92,8 +90,6 @@ We also see that MiniSat remains the fastest solver for harnesses that already r
 Of the harnesses that run for more than 10 seconds, Kissat is the fastest on 47% of them, CaDiCaL is the fastest on 24%, and MiniSat on the rest.
 
 By picking the best solver for each harness using the `kani::solver` attribute, we can can bring the total cumulative runtime from 2 hours and 20 minutes down to 15 minutes (counting timeouts as 1800s), while solving two more harnesses. Great savings if your harnesses are run in CI!
-
-[^1]: Without our enhancement to CBMC, it was already possible to select a different SAT solver without rebuilding CBMC via the `--external-sat-solver` option. However, this option doesn't use the solver in incremental mode (i.e. through its library API, keeping the solver alive between successive calls), and instead relies on writing DIMACS files to disk, which often results in decreased performance.
 
 ## Adding Direct Export of GOTO Binaries
 
@@ -369,3 +365,9 @@ Some optimizations are geared towards solving unsolvable cases, whereas others a
 A reflection of the difficult problem space we are dealing with.
 Specific tools can achieve better performance with niche optimizations, but tools like Kani have to be optimized at various levels to achieve realistic performant verification.
 We hope you enjoyed the blog post and got a sense of the need for a multi-faceted approach!
+
+---
+## Footnotes
+
+[^build-details]: To verify [Cargo](https://doc.rust-lang.org/stable/cargo/) packages, Kani employs Cargo to correctly build all the dependencies before translating them to GOTO programs.
+[^1]: Without our enhancement to CBMC, it was already possible to select a different SAT solver without rebuilding CBMC via the `--external-sat-solver` option. However, this option doesn't use the solver in incremental mode (i.e. through its library API, keeping the solver alive between successive calls), and instead relies on writing DIMACS files to disk, which often results in decreased performance.
