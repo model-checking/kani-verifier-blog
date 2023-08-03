@@ -115,7 +115,7 @@ The table below reports total time and memory consumption when running with `kan
 
 For `s2n-quic-core`, which contains 37 verification harnesses, we observe a reduction of 45% of *User time* from 199s down to 111s, and a 20% memory consumption increase from ~670Mb to ~815Mb.
 For the two other crates which contain respectively 3 and 1 harnesses, the *User time* is dominated by Rust to MIR compilation and the total gains with GOTO binary export are lower
-at roughly 10% and even degrade to negative 4%, albeit for a virtually non memory consumption increase.
+at roughly 10% and even degrade to negative 4%, albeit for virtually no memory consumption increase.
 
 Looking in more detail at GOTO code generation and GOTO binary export time for individual harnesses, excluding the Rust-to-MIR compilation time,
 we see that GOTO binary export is ~9x faster than JSON export, and that the GOTO code generation and export step is now ~4x faster (see the _Detailed table_ below). The savings seem small but accumulate to eventually make a noticeable difference.
