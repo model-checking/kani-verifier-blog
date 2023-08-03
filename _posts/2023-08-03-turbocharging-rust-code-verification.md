@@ -33,7 +33,7 @@ Internally, this verification process is a bit more complicated, and can be spli
 In fact, Kani employs a collection of tools to perform the different stages of the verification.
 Kani's main process is called `kani-driver`, and its main purpose is to orchestrate the execution and communication of these other tools:
 
-1. The compilation stage is done mostly[^build-details] by `kani-compiler`, which is an extension of the Rust compiler that we have developed. `kani-compiler` will generate a `goto-program` by combining all the logic that is reachable from a harness.
+1. The compilation stage is done mostly[^build-details] by `kani-compiler`, which is an extension of the Rust compiler that we have developed. `kani-compiler` will generate a `goto-program` by combining all the code reachable from a harness.
 2. For the symbolic execution stage Kani invokes [CBMC](https://www.cprover.org/cbmc/).
 3. The satisfiability checking stage is performed by CBMC itself, by invoking a [satisfiability (SAT) solver](https://en.wikipedia.org/wiki/SAT_solver) such as [MiniSat](http://minisat.se/).
 
