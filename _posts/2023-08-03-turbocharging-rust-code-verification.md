@@ -253,7 +253,7 @@ Field-sensitivity was first extended to unions in `cbmc 5.71.0`, but did not mak
 The feature was then refined and stabilized in several iterations and became stable with `cbmc v5.85.0` in early June 2023, and released through `kani v0.31.0` built on top of `cbmc v5.86.0`.
 This new CBMC feature vastly improved performance for Rust programs manipulating `Vec<T>` and `BTreeSet<T>` data types, and allowed us to solve a number performance issues reported by our users: [#705](https://github.com/model-checking/kani/issues/705), [#1226](https://github.com/model-checking/kani/issues/1226), [#1657](https://github.com/model-checking/kani/issues/1657), [#1673](https://github.com/model-checking/kani/issues/1673), [#1676](https://github.com/model-checking/kani/issues/1676).
 
-The following tables and plots were obtained by running the kani `perf` test suite with `kani 0.33.0`, `cbmc 5.88.1` with `cadical` as default SAT solver for all tests, a timeout of 900s, with and without applying the union-field sensitivity transform.
+The following tables and plots were obtained by running the kani `perf` test suite with `kani 0.33.0`, `cbmc 5.88.1` with `cadical` as the default SAT solver for all tests, a timeout of 900s, with and without applying the union-field sensitivity transform.
 
 
 | verification harness               | no-sens | sens | change          |
