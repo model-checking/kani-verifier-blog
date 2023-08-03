@@ -6,7 +6,7 @@ title:  "Turbocharging Rust Code Verification"
 Kani is a bit-precise model checker that can verify properties about your Rust code.
 To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
 
-Over the past 9 months we have optimised Kani at different levels to either improve general performance or solve some specific performance problems encountered on user verification harnesses.
+Over the past 9 months, we have optimized Kani at different levels to either improve general performance or solve some specific performance problems encountered on user verification harnesses.
 
 In this post, we'll discuss three optimizations enabled through three different components of Kani. In short:
 
