@@ -104,7 +104,7 @@ The JSON to GOTO binary conversion was one of the most time consuming steps in t
 We implemented direct GOTO binary serialisation in Kani, which allows us to skip the costly invocation of `symtab2gb`.
 Kani can now perform the MIR-to-GOTO code generation and GOTO binary export 4X faster than before.
 
-The table below reports total time and memory consumption when running `kani --tests --only-codegen` with `kani-0.33.3` for three crates of the `s2n-quic` project, with JSON symbol table export versus GOTO binary export.
+The table below reports total time and memory consumption when running with `kani-0.33.0` for code generation only, for three crates of the `s2n-quic` project, with JSON symbol table export versus GOTO binary export.
 
 | Crate               | User time (JSON) | User time (GOTO bin.) | Peak Mem. (JSON) | Peak Mem. (GOTO bin.) |
 | ------------------- | ---------------: | --------------------: | ---------------: | --------------------: |
@@ -179,71 +179,6 @@ Detailed GOTO codegen and export times table
 </div>
 </details>
 
-<details>
-<summary>
-Details on the GOTO binary format
-</summary>
-<div markdown=1>
-
-Internally, CBMC uses a single generic data structure called [`irept`](https://github.com/diffblue/cbmc/blob/develop/src/util/irep.h#L308) to represent all tree-structured data (see [statements](https://github.com/diffblue/cbmc/blob/develop/src/util/std_expr.h), [expressions](https://github.com/diffblue/cbmc/blob/develop/src/util/std_expr.h), [types](https://github.com/diffblue/cbmc/blob/develop/src/util/std_types.h) and [source locations](https://github.com/diffblue/cbmc/blob/develop/src/util/source_location.h) in the CBMC code base). A GOTO binary is mainly a collection of serialised `irept`.
-
-The `Irep` type would look like this if written in Rust:
-
-```rust
-// an opaque type for an interned String
-struct IrepId;
-
-// a generic tree node
-struct Irep {
-    // node identifier, defines the interpretation of the node
-    id: IrepId,
-    // Subtrees indexed by integer
-    sub: Vec<Rc<Irep>>,
-    // Subtrees keyed by name
-    named_sub: Map<IrepId, Rc<Irep>>,
-}
-```
-
-`Ireps` are tagged by an `IrepId` (an interned string) giving them their meaning. An `Irep` references other `Ireps` through reference counted smart pointers. `Ireps` also allow safe sharing of subtrees, with a copy-on-write update mechanism. For instance the expression `x + y` would be represented by an `Irep` similar to this:
-
-```rust
-Irep {
-    id = IrepId("+"),
-    sub: Vec(
-        Irep(
-            id = "symbol_expr",
-            named_sub: Map((IrepId("identifier"), Irep(id: IrepId("x"))))
-        ),
-        Irep(
-            id = "symbol_expr",
-            named_sub: Map((IrepId("identifier"), Irep(id: IrepId("y"))))
-        ),
-    )
-}
-```
-
-The serialization/deserialization algorithm for GOTO binaries uses a technique called *value numbering* to avoid repeating identical `Ireps` and strings in the binary file.
-
-A _value numbering_ for a type `K` is a function that assigns a unique number in the range `[0, N)` to each value in a multiset `S` of values of type `K` ((multiset: some values can be repeated).
-Numberings are usually implemented using a hash map of type `HashMap<K, usize>`.
-Each value `k` in the set `S` is numbered by performing a lookup in the map: if an entry for `k` is found, return the associated value, otherwise insert a new entry `(k, numbering.size())` and return the unique number for that entry.
-Value numbering for `Ireps` uses vectors of integers as keys. An `Irep` is numbered by first numbering its id, recursively numbering its subtrees and named subtrees, and forming a key from these unique numbers.
-Then, a lookup is performed for that key in the numbering. Since two `Ireps` with the same id, subtrees and named subtrees are represented by the same key, the unique number of the key also identifies the `Irep` uniquely by its contents. CBMC's binary serde algorithm uses numbering functions for `Ireps` and `Strings` that are used as a cache of already serialised `Ireps` and `Strings`.
-An `Irep` node is fully serialised only the first time it is encountered. Later occurrences are serialised by reference, i.e. only by writing their unique identifier.
-This achieves maximum sharing of identical subtrees and strings in the binary file.
-
-The format also uses *7-bit variable length encoding* for integer values to reduce the overall file size.
-The encoding works as follows: an integer represented using `N` bytes is serialised to a list of `M` bytes, where each byte encodes a group of seven bits of the original integer and one bit signals the continuation of the list.
-For instance, the decimal value 32bit decimal `190341` is represented as `00000000000000101110011110000101` in binary.
-Splitting this number in groups of 7-bits starting from the right, we get `0000101 1001111 0001011 0000000 0000`.
-We see that all bits in the two last groups are false, so only the first three groups will be serialised.
-With continuation bits added (represented in parentheses), the encoding for this 4-byte number only uses 3-bytes:  `(1)0000101(1)1001111(0)0001011`.
-
-The GOTO binary serde code can be found [here](https://github.com/model-checking/kani/blob/main/cprover_bindings/src/irep/goto_binary_serde.rs).
-
-</div>
-</details>
-
 ## Enabling Constant Propagation for Individual Fields of Union Types
 
 Union types are very common in goto-programs emitted by Kani, due to the fact that Rust code typically uses `enums`, which are themselves modelled as tagged unions at the goto-program level.
@@ -255,16 +190,7 @@ This new CBMC feature vastly improved performance for Rust programs manipulating
 
 The following tables and plots were obtained by running the kani `perf` test suite with `kani 0.33.0`, `cbmc 5.88.1` with `cadical` as the default SAT solver for all tests, a timeout of 900s, with and without applying the union-field sensitivity transform.
 
-
-| verification harness               | no-sens | sens | change          |
-| ---------------------------------- | ------- | ---- | --------------- |
-| btreeset/insert_any/main           | False   | True | ✅ newly passing |
-| btreeset/insert_multi/insert_multi | False   | True | ✅ newly passing |
-| btreeset/insert_same/main          | False   | True | ✅ newly passing |
-| misc/display_trait/slow            | False   | True | ✅ newly passing |
-| misc/struct_defs/fast_harness      | False   | True | ✅ newly passing |
-
-Field sensitivity allows 5 new verification harnesses to be solved under the 900s limit.
+Field sensitivity allows 5 new verification harnesses to be solved under the 900s limit: `btreeset/insert_any/main`, `btreeset/insert_multi/insert_multi`, `btreeset/insert_same/main`, `misc/display_trait/slow`, `misc/struct_defs/fast_harness`.
 
 ![Total time](/kani-verifier-blog/assets/images/field-sens-plots/total-time.png)
 
