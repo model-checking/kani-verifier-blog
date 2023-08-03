@@ -97,7 +97,7 @@ By picking the best solver for each harness using the `kani::solver` attribute, 
 
 ## Adding Direct Export of GOTO Binaries
 
-`kani-compiler` translates a Rust program into a GOTO program and exports it as a *symbol table* for CBMC to analyse. A *symbol table* stores the definitions and source locations of all symbols manipulated by the program (types symbols and their definitions, static symbols and their initial value, functions symbols and their bodies, etc.).
+`kani-compiler` translates a Rust program into a GOTO program and exports it as a *symbol table* for CBMC to analyse. A *symbol table* stores the definitions and source locations of all symbols manipulated by the program (type symbols and their definitions, static symbols and their initial value, function symbols and their bodies, etc.).
 The symbol table contents hence mostly consists of serialized abstract syntax trees.
 Originally, Kani serialized symbol tables to JSON and then used the CBMC utility `symtab2gb` to translate the JSON symbol table into a *GOTO binary*, which is the format that CBMC actually expects as input.
 The JSON to GOTO binary conversion was one of the most time consuming steps in the compilation stage.
