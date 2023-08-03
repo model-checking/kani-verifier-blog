@@ -249,7 +249,7 @@ The GOTO binary serde code can be found [here](https://github.com/model-checking
 Union types are very common in goto-programs emitted by Kani, due to the fact that Rust code typically uses `enums`, which are themselves modelled as tagged unions at the goto-program level.
 Initially the *field sensitivity* transform in CBMC enabled constant propagation for individual array cells and individual struct fields, but not for union fields.
 Since constant propagation helps pruning control flow branches during symbolic execution and can greatly reduce the runtime of an analysis, ensuring that constant propagation also works for union fields is important for Rust programs.
-Field-sensitivity was first extended to unions in `cbmc-5.71.0`, but did not make it to Kani until `kani v0.17.0` built on top of `cbmc v5.72.0`.
+Field-sensitivity was first extended to unions in `cbmc 5.71.0`, but did not make it to Kani until `kani v0.17.0` built on top of `cbmc v5.72.0`.
 The feature was then refined and stabilized in several iterations and became stable with `cbmc v5.85.0` in early June 2023, and released through `kani v0.31.0` built on top of `cbmc v5.86.0`.
 This new CBMC feature vastly improved performance for Rust programs manipulating `Vec<T>` and `BTreeSet<T>` data types, and allowed us to solve a number performance issues reported by our users: [#705](https://github.com/model-checking/kani/issues/705), [#1226](https://github.com/model-checking/kani/issues/1226), [#1657](https://github.com/model-checking/kani/issues/1657), [#1673](https://github.com/model-checking/kani/issues/1673), [#1676](https://github.com/model-checking/kani/issues/1676).
 
