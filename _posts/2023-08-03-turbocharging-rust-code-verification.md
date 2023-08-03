@@ -93,7 +93,7 @@ Of the harnesses that run for more than 10 seconds, Kissat is the fastest on 47%
 
 By picking the best solver for each harness using the `kani::solver` attribute, we can can bring the total cumulative runtime from 2 hours and 20 minutes down to 15 minutes (counting timeouts as 1800s), while solving two more harnesses. Great savings if your harnesses are run in CI!
 
-[^1]: Without our enhancement to CBMC, it was already possible to select a different SAT solver without rebuilding CBMC via the `--external-sat-solver` option. However, this option doesn't use the solver in incremental mode(i.e. through its library API, keeping the solver alive between successive calls), and instead relies on writing DIMACS files to disk, which often results in decreased performance.
+[^1]: Without our enhancement to CBMC, it was already possible to select a different SAT solver without rebuilding CBMC via the `--external-sat-solver` option. However, this option doesn't use the solver in incremental mode (i.e. through its library API, keeping the solver alive between successive calls), and instead relies on writing DIMACS files to disk, which often results in decreased performance.
 
 ## Adding Direct Export of GOTO Binaries
 
