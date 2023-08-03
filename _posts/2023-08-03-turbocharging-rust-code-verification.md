@@ -102,7 +102,7 @@ The symbol table contents hence mostly consists of serialized abstract syntax tr
 Originally, Kani serialized symbol tables to JSON and then used the CBMC utility `symtab2gb` to translate the JSON symbol table into a *GOTO binary*, which is the format that CBMC actually expects as input.
 The JSON to GOTO binary conversion was one of the most time consuming steps in the compilation stage.
 We implemented direct GOTO binary serialisation in Kani, which allows us to skip the costly invocation of `symtab2gb`.
-Kani can now perform the MIR-to-GOTO code generation and GOTO binary export 4x faster than before.
+Kani can now perform the MIR-to-GOTO code generation and GOTO binary export 4X faster than before.
 
 The table below reports total time and memory consumption when running `kani --tests --only-codegen` with `kani-0.33.3` for three crates of the `s2n-quic` project, with JSON symbol table export versus GOTO binary export.
 
