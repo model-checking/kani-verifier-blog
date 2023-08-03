@@ -356,7 +356,7 @@ The number of verification conditions generated is sometimes slightly higher but
 
 ![SAT solving time](/kani-verifier-blog/assets/images/field-sens-plots/sat-time.png)
 
-Overall the SAT solving time is sometimes slightly degraded but otherwise mostly improved across the board with field-sensitivity.
+Overall, the SAT solving time is sometimes slightly degraded but otherwise mostly improved across the board with field-sensitivity.
 
 <details>
 <summary>
