@@ -11,7 +11,7 @@ Over the past 9 months, we have optimized Kani at different levels to either imp
 In this post, we'll discuss three optimizations enabled through three different components of Kani. In short:
 
 - By allowing the selection of a specific SAT solver (globally or per harness) we can obtain consistent speedups of 2-8X and up to 200X on specific harnesses, and an 85% reduction in total runtime on a crate like [s2n-quic-core](https://github.com/aws/s2n-quic/tree/main/quic/s2n-quic-core);
-- By adding a new GOTO program serializer that exports files in CBMC's own binary format, we obtain a consistent x4 speedup on the GOTO code generation + export step;
+- By adding a new GOTO program serializer that exports files in CBMC's own binary format, we obtain a consistent 4X speedup on the GOTO code generation + export step;
 - By improving constant propagation in CBMC for union types, Kani can now solve in a few seconds verification harnesses that used to explode in time and memory.
 
 Compared to the last version of 2022, the current version of Kani (August 2023) is swifter and solves more problems in less time.
