@@ -22,7 +22,7 @@ But before diving into the details of each new feature and optimization, we'll s
 
 First, let's briefly introduce you to Kani's high level architecture to understand where modifications were performed.
 
-Kani can be invoked either directly on a file using `kani my_file.rs` or on a whole package or crate via `cargo kani` (see usage [here]( https://model-checking.github.io/kani/usage.html)). In both cases the verification process is very similar and Kani will execute until it can check all harnesses found in the code, and it will report whether each harnesses was successfully verified or failed.
+Kani can be invoked either directly on a Rust file using `kani my_file.rs` or on a whole package or crate via `cargo kani` (see usage [here]( https://model-checking.github.io/kani/usage.html)). In both cases, the verification process is very similar and Kani will continue to run until it finishes checking all harnesses found in the code, and it will report whether each harness was successfully verified or failed.
 
 Internally, this verification process is a bit more complicated, and can be split into three main stages:
 
