@@ -268,7 +268,7 @@ Field sensitivity allows 5 new verification harnesses to be solved under the 900
 
 ![Total time](/kani-verifier-blog/assets/images/field-sens-plots/total-time.png)
 
-We observe significant 10% to 99% reduction in rutime for roughly a third of verification harnesses (and 5 newly solved harnesses within the 900s time limit), but we also observe a 10% to 55% runtime degradation or 25% of the verification harnesses, so this feature does not bring a consistent benefit. However, the cumulative total time to run the `perf` suite without union field sensitivity is roughly 6500s, and it drops to 1784s with union field sensitivity activated. Disabling union field sensitivity for harnesses where it degrades performance would only bring the cumulative total time down to 1676s. So we can say getting rid of timeouts and gains on a subset of harnesses offset the losses on the rest of harnesses.
+We observe a 10% to 99% reduction in runtime for roughly a third of verification harnesses (and 5 newly solved harnesses within the 900s time limit), but we also observe a 10% to 55% runtime degradation for 25% of the verification harnesses, so this feature does not bring a consistent benefit. However, the cumulative total time to run the `perf` suite without union field sensitivity is roughly 6500s, and it drops to 1784s with union field sensitivity activated. Disabling union field sensitivity for harnesses where it degrades performance would only bring the cumulative total time down to 1676s. So we can say getting rid of timeouts and gains on a subset of harnesses offset the losses on the rest of harnesses.
 
 <details>
 
