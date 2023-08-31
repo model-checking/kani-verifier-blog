@@ -114,17 +114,17 @@ Let us now see how we can extend this harness to allow us to verify that our rat
 
 Our noisy neighbor mitigation is correct if we always generate the “correct” number of tokens with each call to `auto_replenish`, meaning it is impossible for a guest to do more I/O than configured. Formally, this means
 
-`0 ≤ (now - last_update) - new_tokens * (refill_time/size) < refill_time/size`
+$$0 \leq \left(now - last\\_update\right) - \left( new\\_tokens \times \left(\frac{refill\\_time}{size}\right) \right) < \left(\frac{refill\\_time}{size}\right)$$
 
-Here, *new_tokens* is the number of tokens that `auto_replenish` generated. The fraction `refill_time/size` is simply the time it takes to generate a single token. Thus, the property states that if we compute the time that it should have taken to generate *new_tokens* and subtract it from the time that actually passed, we are left with an amount of time less than what it would take to generate an additional token: we replenished the maximal number of tokens possible. 
+Here, $new\\_tokens$ is the number of tokens that `auto_replenish` generated. The fraction $\left(\frac{refill\\_time}{size}\right)$ is simply the time it takes to generate a single token. Thus, the property states that if we compute the time that it should have taken to generate $new\\_tokens$ and subtract it from the time that actually passed, we are left with an amount of time less than what it would take to generate an additional token: we replenished the maximal number of tokens possible. 
 
-The difficulty of implementing a correct rate limiter is dealing with “leftover” time: If enough time passed to generate “1.8 tokens”, what does Firecracker do with the “0.8” tokens it cannot (as everything is integer valued) add to the budget? Originally, the rate limiter simply dropped these: if you called `auto_replenish` at an inopportune time, then the “0.8” would not be carried forward and the guest essentially “lost” part of its I/O allowance to rounding. Then, with [#3370](https://github.com/firecracker-microvm/firecracker/pull/3370), we decided to fix this by only advancing `last_update` by `new_tokens * (refill_time/size)` instead of setting it to *now*. This way the fractional tokens will be carried forward, and we even hand-wrote a [proof](https://github.com/firecracker-microvm/firecracker/pull/3370#pullrequestreview-1252110534) to check that `last_update` and the actual system time will not diverge, boldly concluding
-
-
->This means that `last_updated` indeed does not fall behind more than the execution time of `auto_replenish` plus a constant dependent on the bucket configuration.
+The difficulty of implementing a correct rate limiter is dealing with “leftover” time: If enough time passed to generate “1.8 tokens”, what does Firecracker do with the “0.8” tokens it cannot (as everything is integer valued) add to the budget? Originally, the rate limiter simply dropped these: if you called `auto_replenish` at an inopportune time, then the “0.8” would not be carried forward and the guest essentially “lost” part of its I/O allowance to rounding. Then, with [#3370](https://github.com/firecracker-microvm/firecracker/pull/3370), we decided to fix this by only advancing $last\\_update$ by $new\\_tokens \times \left(\frac{refill\\_time}{size}\right)$ instead of setting it to `now`. This way the fractional tokens will be carried forward, and we even hand-wrote a [proof](https://github.com/firecracker-microvm/firecracker/pull/3370#pullrequestreview-1252110534) to check that $last\\_update$ and the actual system time will not diverge, boldly concluding
 
 
-Here, the “constant dependent on the bucket configuration” was `refill_time/size`, rounded down. This is indeed implies our above specified property, so when we revisited `auto_replenish` a few months later to add the following two `debug_asserts!` derived from our formal property.
+>This means that $last\\_updated$ indeed does not fall behind more than the execution time of `auto_replenish` plus a constant dependent on the bucket configuration.
+
+
+Here, the “constant dependent on the bucket configuration” was $\left(\frac{refill\\_time}{size}\right)$, rounded down. This is indeed implies our above specified property, so when we revisited `auto_replenish` a few months later to add the following two `debug_asserts!` derived from our formal property.
 
 ```rs
 // time_adjustment = tokens * (refill_time / size)
@@ -133,9 +133,9 @@ debug_assert!((now - last_update) >= time_adjustment);
 debug_assert!((now - last_update - time_adjustment) * size < refill_time);
 ```
 
-we expected the verification to succeed. However, Kani presented us with The “VERIFICATION FAILED” message, which was unexpected to say the least.
+we expected the verification to succeed. However, Kani presented us with The "**<span style="color:red">VERIFICATION FAILED</span>**" message, which was unexpected to say the least.
 
-So what went wrong? In the hand-written proof, the error was assuming that `-⌊-x⌋ = ⌊x⌋` (had this step been gotten correctly, the bound would have been `refill_time/size` rounded *up*, which obviously allows for violations). To see how our code actually violates the property, we need to have a look at how the relevant part of `auto_replenish` was actually implemented:
+So what went wrong? In the hand-written proof, the error was assuming that $-\lfloor -x \rfloor = \lfloor x \rfloor$ (had this step been gotten correctly, the bound would have been $\left(\frac{refill\\_time}{size}\right)$ rounded *up*, which obviously allows for violations). To see how our code actually violates the property, we need to have a look at how the relevant part of `auto_replenish` was actually implemented:
 
 ```rs
 let time_delta = self.last_update.elapsed().as_nanos() as u64;
@@ -148,7 +148,7 @@ let time_adjustment = (tokens * self.refill_time) / self.size
 self.last_update += Duration::from_nanos(time_adjustment);
 ```
 
-The issue lies in the way we compute `time_adjustment`: Consider a bucket of size 2 with refill time 3ns and assume a time delta of 11ns. We compute `11*2/3 ≈ 7` tokens, and then a time adjustment of `7*3/2 ≈ 10ns`. However, 10ns  is only enough to replenish `10*2/3 ≈ 6`  tokens! The problem here is that 7 tokens do not take an integer number of nanoseconds to replenish. They take 10.5ns. However the integer division rounds this down, and thus the guest essentially gets to use those 0.5ns twice. Assuming the guest can time when it triggers down to nanosecond precision, and the rate limiter is configured such that `refill_time/size` is not an integer, the guest could theoretically cause these fractional nanoseconds to accumulate to get an extra token every `10⁶ * refill_time/size * max(1, refill_time/size)` nanoseconds. **For a rate limiter configured at 1GB/s, this would be an excess of 1KB/s**.
+The issue lies in the way we compute `time_adjustment`: Consider a bucket of size 2 with refill time 3ns and assume a time delta of 11ns. We compute $11 \times 2/3 \approx 7$ tokens, and then a time adjustment of $7 \times 3/2 \approx 10ns$. However, 10ns  is only enough to replenish $10 \times 2/3 \approx 6$  tokens! The problem here is that 7 tokens do not take an integer number of nanoseconds to replenish. They take 10.5ns. However the integer division rounds this down, and thus the guest essentially gets to use those 0.5ns twice. Assuming the guest can time when it triggers down to nanosecond precision, and the rate limiter is configured such that $\left(\frac{refill\\_time}{size}\right)$ is not an integer, the guest could theoretically cause these fractional nanoseconds to accumulate to get an extra token every $10^{6} \times \left(\frac{refill\\_time}{size}\right) \times max\left(1, \left(\frac{refill\\_time}{size}\right)\right)$ nanoseconds. **For a rate limiter configured at 1GB/s, this would be an excess of 1KB/s**.
 
 The fix for this was to round up instead of down in our computation of `time_adjustment`. For the complete code listing of the rate limiter harnesses, see [here](https://github.com/firecracker-microvm/firecracker/blob/1a2c6ada116b52df891857d3e82503ad1ef845e5/src/vmm/src/rate_limiter/mod.rs#L525).
 
