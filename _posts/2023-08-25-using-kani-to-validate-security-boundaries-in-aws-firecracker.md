@@ -3,11 +3,11 @@ layout: post
 title: Using Kani to Validate Security Boundaries in AWS Firecracker
 ---
 
-AWS is committed to achieving the highest levels of security in the cloud. To work towards this goal, we have applied the Kani model checker to verify safety-critical properties in core components of the Firecracker Virtual Machine Monitor using mathematical logic.
+Security assurance is paramount for any system running in the cloud. To take a step foward the highest levels of security, we have applied the [Kani model checker](https://github.com/model-checking/kani) to verify safety-critical properties in core components of the [Firecracker Virtual Machine Monitor](https://firecracker-microvm.github.io/) using mathematical logic.
 
 Firecracker is an open source project written in Rust which uses the Linux Kernel-based Virtual Machine (KVM) to create and manage microVMs. Firecracker has a minimalist design which allows fast (~150ms) microVM start-up time, secure multi-tenancy of microVMs on the same host and memory/CPU over-subscription. Firecracker is currently used in production by AWS Lambda, AWS Fargate and parts of AWS Analytics to build their service platforms. 
 
-For the past 7 months, Felipe Monteiro, an Applied Scientist on the [Kani](https://github.com/model-checking/kani/) team and Patrick Roy, a Software Development Engineer from the [AWS Firecracker](https://github.com/firecracker-microvm/firecracker) team, collaborated to develop Kani harnesses for Firecracker. As a result of this collaboration, the Firecracker team is now running 27 Kani harnesses across 3 verification suites in their continuous integration pipelines (taking approximately 15 minutes to complete), ensuring that all checked properties of critical systems are upheld on every code change.
+For the past 7 months, [Felipe Monteiro](https://feliperodri.github.io/), an Applied Scientist on the Kani team and [Patrick Roy](https://uk.linkedin.com/in/patrick-roy-31929323a), a Software Development Engineer from the AWS Firecracker team, collaborated to develop Kani harnesses for Firecracker. As a result of this collaboration, the Firecracker team is now running 27 Kani harnesses across 3 verification suites in their continuous integration pipelines (taking approximately 15 minutes to complete), ensuring that all checked properties of critical systems are upheld on every code change.
 
 In this blog post, we show how Kani helped Firecracker harden two core components, namely our I/O rate limiter and I/O transport layer (VirtIO), presenting the issues we were able to identify and fix. Particularly, the second part of this post picks up from a [previous Kani/Firecracker blogpost](https://model-checking.github.io/kani-verifier-blog/2022/07/13/using-the-kani-rust-verifier-on-a-firecracker-example.html) and shows how improvements to Kani over the last year made verifying conformance with a section of the VirtIO specification feasible.
 
@@ -285,8 +285,4 @@ Thanks to Kani, the Firecracker team was able to verify critical areas of code t
 
 We found 5 bugs in our rate limiter implementation, the most significant one a rounding error that allowed guests to exceed their prescribed I/O bandwidth by up to 0.01% in some cases. Additionally, we found one bug in our VirtIO stack, where a malicious guest could set up a virtio queue that partially overlapped with the MMIO memory region, resulting in Firecracker crashing on boot. Finally, the debug assertions added to the code under verification allowed us to identify a handful of unit tests which were not set up correctly. These have also been fixed. 
 
-All in all, Kani proof harnesses has proven a valuable defense-in-depth measure for Firecracker, nicely complementing our existing testing infrastructure. We plan to continue our investment in these harnesses as we develop new Firecracker features, to ensure consistently high security standards. 
-
-## Author Bio
-
-Patrick Roy is a Software Development Engineer at AWS, working on proactive security for Firecracker. He joined AWS in October 2022, after finishing his Masters in Mathematics and Foundations of Computer Science at the University of Oxford.  
+All in all, Kani proof harnesses has proven a valuable defense-in-depth measure for Firecracker, nicely complementing our existing testing infrastructure. We plan to continue our investment in these harnesses as we develop new Firecracker features, to ensure consistently high security standards. To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
