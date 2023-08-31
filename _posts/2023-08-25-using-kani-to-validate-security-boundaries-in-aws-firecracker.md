@@ -5,7 +5,7 @@ title: Using Kani to Validate Security Boundaries in AWS Firecracker
 
 Security assurance is paramount for any system running in the cloud. In order to achieve the highest levels of security, we have applied the [Kani model checker](https://github.com/model-checking/kani) to verify safety-critical properties in core components of the [Firecracker Virtual Machine Monitor](https://firecracker-microvm.github.io/) using mathematical logic.
 
-Firecracker is an open source project written in Rust which uses the Linux Kernel-based Virtual Machine (KVM) to create and manage microVMs. Firecracker has a minimalist design which allows fast (~150ms) microVM start-up time, secure multi-tenancy of microVMs on the same host and memory/CPU over-subscription. Firecracker is currently used in production by AWS Lambda, AWS Fargate and parts of AWS Analytics to build their service platforms. 
+Firecracker is an open source project written in Rust which uses the Linux Kernel-based Virtual Machine (KVM) to create and manage microVMs. Firecracker has a minimalist design which allows fast (~150ms) microVM start-up time, secure multi-tenancy of microVMs on the same host and memory/CPU over-subscription. Firecracker is currently used in production by AWS Lambda, AWS Fargate and parts of AWS Analytics to build their service platforms.
 
 For the past 7 months, [Felipe Monteiro](https://feliperodri.github.io/), an Applied Scientist on the Kani team and [Patrick Roy](https://uk.linkedin.com/in/patrick-roy-31929323a), a Software Development Engineer from the AWS Firecracker team, collaborated to develop Kani harnesses for Firecracker. As a result of this collaboration, the Firecracker team is now running 27 Kani harnesses across 3 verification suites in their continuous integration pipelines (taking approximately 15 minutes to complete), ensuring that all checked properties of critical systems are upheld on every code change.
 
@@ -21,9 +21,9 @@ In multi-tenant systems, microVMs from different customers simultaneously co-exi
 
 In a token bucket based rate-limiter, each microVM has a budget of “tokens” that can be exchanged for permission to do one byte of I/O. These tokens regenerate at a fixed rate, and if the microVM runs out of tokens, it gets I/O-throttled. This process of draining and replenishing is best visualized by an actual bucket into which water drips at a fixed rate, and from which water can be extracted at some limited rate:
 
-<img src="{{site.baseurl | prepend: site.url}}/assets/images/token-bucket-diagram.png" alt="Image visualizing the replenishing and draining of a TokenBucket" /> 
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/token-bucket-diagram.png" alt="Image visualizing the replenishing and draining of a TokenBucket" />
 
-The property we want to verify is that a microVM is not allowed to exceed the configured maximum I/O throughput rate. For a virtual block device rate-limited at 1GB/s, we want to prove that in any one-second interval, at most 1GB of data is allowed to pass through the device. 
+The property we want to verify is that a microVM is not allowed to exceed the configured maximum I/O throughput rate. For a virtual block device rate-limited at 1GB/s, we want to prove that in any one-second interval, at most 1GB of data is allowed to pass through the device.
 
 What sounds simple in theory is actually fairly difficult to implement. For example, due to a [rounding error](https://github.com/firecracker-microvm/firecracker/pull/3706) a guest could, in some scenarios, do up to 0.01% more I/O than configured. We discovered this bug thanks to a Kani harness for our throughput property stated above, and this harnesses is the main focus of the rest of this section.
 
@@ -41,7 +41,7 @@ pub struct TokenBucket {
 
     // Current token budget.
     budget: u64,
-    
+
     // Last time this token bucket was replenished.
     last_update: Instant,
 
@@ -61,7 +61,7 @@ The `clock_gettime` function is passed a pointer to a `libc::timespec` structure
 mod stubs {
     static mut LAST_SECONDS: i64 = 0;
     static mut LAST_NANOS: i64 = 0;
-        
+
     const NANOS_PER_SECOND: i64 = 1_000_000_000;
 
     pub unsafe extern "C" fn clock_gettime(_clock_id: libc::clockid_t, tp: *mut libc::timespec) -> libc::c_int {
@@ -114,9 +114,9 @@ Let us now see how we can extend this harness to allow us to verify that our rat
 
 Our noisy neighbor mitigation is correct if we always generate the “correct” number of tokens with each call to `auto_replenish`, meaning it is impossible for a guest to do more I/O than configured. Formally, this means
 
-$$0 \leq \left(now - last\\_update\right) - \left( new\\_tokens \times \left(\frac{refill\\_time}{size}\right) \right) < \left(\frac{refill\\_time}{size}\right)$$
+$$0 \leq \left(now - last{\_}update\right) - \left( new{\_}tokens \times \left(\frac{refill{\_}time}{size}\right) \right) < \left(\frac{refill{\_}time}{size}\right)$$
 
-Here, $new\\_tokens$ is the number of tokens that `auto_replenish` generated. The fraction $\left(\frac{refill\\_time}{size}\right)$ is simply the time it takes to generate a single token. Thus, the property states that if we compute the time that it should have taken to generate $new\\_tokens$ and subtract it from the time that actually passed, we are left with an amount of time less than what it would take to generate an additional token: we replenished the maximal number of tokens possible. 
+Here, $new\\_tokens$ is the number of tokens that `auto_replenish` generated. The fraction $\left(\frac{refill\\_time}{size}\right)$ is simply the time it takes to generate a single token. Thus, the property states that if we compute the time that it should have taken to generate $new\\_tokens$ and subtract it from the time that actually passed, we are left with an amount of time less than what it would take to generate an additional token: we replenished the maximal number of tokens possible.
 
 The difficulty of implementing a correct rate limiter is dealing with “leftover” time: If enough time passed to generate “1.8 tokens”, what does Firecracker do with the “0.8” tokens it cannot (as everything is integer valued) add to the budget? Originally, the rate limiter simply dropped these: if you called `auto_replenish` at an inopportune time, then the “0.8” would not be carried forward and the guest essentially “lost” part of its I/O allowance to rounding. Then, with [#3370](https://github.com/firecracker-microvm/firecracker/pull/3370), we decided to fix this by only advancing $last\\_update$ by $new\\_tokens \times \left(\frac{refill\\_time}{size}\right)$ instead of setting it to `now`. This way the fractional tokens will be carried forward, and we even hand-wrote a [proof](https://github.com/firecracker-microvm/firecracker/pull/3370#pullrequestreview-1252110534) to check that $last\\_update$ and the actual system time will not diverge, boldly concluding
 
@@ -154,7 +154,7 @@ The fix for this was to round up instead of down in our computation of `time_adj
 
 ## Conformance to the VirtIO Specification
 
-Firecracker is a para-virtualization solution, meaning the guest is aware that it is running inside of a virtual machine. This allows host and guests to collaborate when it comes to I/O, as opposed to the host having to do all the heavy lifting of emulating physical devices. Firecracker uses [VirtIO](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.pdf) for the transport-layer protocol of its paravirtualized device stack. It allows the guest and host to exchange messages via pairs of ring buffers called a *queue*. At a high level, the guest puts requests into a shared array (the “descriptor table”) and puts the index into the descriptor table at which the host can find the new request into the request ring (the “avail ring” in VirtIO lingo). It then notifies the host via interrupt that a new request is available for processing. The host now processes the request, updating the descriptor table entry with its response and, upon finishing, writes the index into the descriptor table into a response ring (the “used ring”). It then notifies the guest that processing of a request has finished. 
+Firecracker is a para-virtualization solution, meaning the guest is aware that it is running inside of a virtual machine. This allows host and guests to collaborate when it comes to I/O, as opposed to the host having to do all the heavy lifting of emulating physical devices. Firecracker uses [VirtIO](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.pdf) for the transport-layer protocol of its paravirtualized device stack. It allows the guest and host to exchange messages via pairs of ring buffers called a *queue*. At a high level, the guest puts requests into a shared array (the “descriptor table”) and puts the index into the descriptor table at which the host can find the new request into the request ring (the “avail ring” in VirtIO lingo). It then notifies the host via interrupt that a new request is available for processing. The host now processes the request, updating the descriptor table entry with its response and, upon finishing, writes the index into the descriptor table into a response ring (the “used ring”). It then notifies the guest that processing of a request has finished.
 
 The Firecracker side of this queue implementation sits right at the intersection between guest and host. According to Firecracker’s [threat model](https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md#threat-containment):
 
@@ -166,11 +166,11 @@ The entirety of the VirtIO queue lives in shared memory and can thus be written 
 
 ```rs
 fn arbitrary_guest_memory() -> GuestMemoryMmap {
-    // We need ManuallyDrop to "leak" the memory area to ensure it lives for 
+    // We need ManuallyDrop to "leak" the memory area to ensure it lives for
     // the entire duration of the proof.
      let memory = ManuallyDrop::new(kani::vec::exact_vec::<u8, GUEST_MEMORY_SIZE>())
                     .as_mut_ptr();
-    
+
     let region = unsafe {
         MmapRegionBuilder::new(GUEST_MEMORY_SIZE)
             .with_raw_mmap_pointer(memory)
@@ -196,7 +196,7 @@ impl kani::Arbitrary for Queue {
     fn any() -> Queue {
         // Firecracker statically sets the maximal queue size to 256.
         let mut queue = Queue::new(FIRECRACKER_MAX_QUEUE_SIZE);
-        
+
         const QUEUE_BASE_ADDRESS: u64 = 0;
         // Descriptor table has 16 bytes per entry, avail ring starts right after.
         const AVAIL_RING_BASE_ADDRESS: u64 =
@@ -205,13 +205,13 @@ impl kani::Arbitrary for Queue {
         // and needs 2 bytes of padding.
         const USED_RING_BASE_ADDRESS: u64 =
             AVAIL_RING_BASE_ADDRESS + 6 + 2 * FIRECRACKER_MAX_QUEUE_SIZE as u64 + 2;
-        
-        queue.size = FIRECRACKER_MAX_QUEUE_SIZE; 
+
+        queue.size = FIRECRACKER_MAX_QUEUE_SIZE;
         queue.ready = true;
         queue.desc_table = GuestAddress(QUEUE_BASE_ADDRESS);
         queue.avail_ring = GuestAddress(AVAIL_RING_BASE_ADDRESS);
         queue.used_ring = GuestAddress(USED_RING_BASE_ADDRESS);
-        
+
         // Index at which we expect the guest to place its next request into
         // the avail ring.
         queue.next_avail = Wrapping(kani::any());
@@ -222,34 +222,34 @@ impl kani::Arbitrary for Queue {
         // How many responses were added to the used ring since the last
         // notification was sent to the guest.
         queue.num_added = Wrapping(kani::any());
-        
+
         queue
     }
 }
 ```
 
-Here, the final two fields, `uses_notif_suppression` and `num_added` are relevant for the property we want to verify. Notification suppression is a mechanism described in [Section 2.6.7 of the VirtIO specification](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.pdf) which is designed to reduce the overall number of interrupts exchanged between guest and host. When enabled, it allows the guest to tell the host that it should not send an interrupt for every single processed request, but instead wait until a specific number of requests have been processed. The guest does this by writing a used ring index into a predefined memory location. The host then will not send interrupts until it uses the specified index for a response. 
+Here, the final two fields, `uses_notif_suppression` and `num_added` are relevant for the property we want to verify. Notification suppression is a mechanism described in [Section 2.6.7 of the VirtIO specification](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.pdf) which is designed to reduce the overall number of interrupts exchanged between guest and host. When enabled, it allows the guest to tell the host that it should not send an interrupt for every single processed request, but instead wait until a specific number of requests have been processed. The guest does this by writing a used ring index into a predefined memory location. The host then will not send interrupts until it uses the specified index for a response.
 
 To better understand this mechanism, consider the following queue:
 
 <img src="{{site.baseurl | prepend: site.url}}/assets/images/virtio-diagram.png" alt="Imagine illustrating used buffer notification suppression" />
 
-The guest just wrote requests 1 through 3 into the avail ring and notified the host. Without notification suppression, the host would now process request 1, write the result into slot 1, and notify the guest about the first request being done. With notification suppression, the host will instead realize that the guest does not want notification until it writes a response to the third slot. This means the host will only notify the request after processing all three requests, and we saved ourselves two interrupts. 
+The guest just wrote requests 1 through 3 into the avail ring and notified the host. Without notification suppression, the host would now process request 1, write the result into slot 1, and notify the guest about the first request being done. With notification suppression, the host will instead realize that the guest does not want notification until it writes a response to the third slot. This means the host will only notify the request after processing all three requests, and we saved ourselves two interrupts.
 
 This is a much simplified scenario. The exact details of this are written down in [Section 2.6.7.2 of the VirtIO 1.1 specification](https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.pdf). We can turn that specification into the following Kani harness:
 
 ```rs
 #[kani::proof]
 #[kani::unwind(2)] // Guest memory regions are stored in a BTreeMap, which
-		   // employs binary search resolving guest addresses to 
+		   // employs binary search resolving guest addresses to
 		   // regions. We only have a single region, so the search
 		   // terminates in one iteration.
 fn verify_spec_2_6_7_2() {
     let mem = arbitrary_guest_memory();
     let mut queue: Queue = kani::any();
-   
+
     // Assume various alignment needs are met. Every function operating on a queue
-    // has a debug_assert! matching this assumption. 
+    // has a debug_assert! matching this assumption.
     kani::assume(queue.is_layout_valid(&mem));
 
     let needs_notification = queue.prepare_kick(&mem);
@@ -281,8 +281,8 @@ Beyond these specification conformance harnesses, we also have standard “absen
 
 ## Conclusion
 
-Thanks to Kani, the Firecracker team was able to verify critical areas of code that were intractable to traditional methods. These include our noisy-neighbor mitigation, a rate limiter, where interactions with the system clock resulted in traditional testing being unreliable, as well as our VirtIO stack, where the interaction with guest memory lead to a state space impossible to cover by other means. 
+Thanks to Kani, the Firecracker team was able to verify critical areas of code that were intractable to traditional methods. These include our noisy-neighbor mitigation, a rate limiter, where interactions with the system clock resulted in traditional testing being unreliable, as well as our VirtIO stack, where the interaction with guest memory lead to a state space impossible to cover by other means.
 
-We found 5 bugs in our rate limiter implementation, the most significant one a rounding error that allowed guests to exceed their prescribed I/O bandwidth by up to 0.01% in some cases. Additionally, we found one bug in our VirtIO stack, where a malicious guest could set up a virtio queue that partially overlapped with the MMIO memory region, resulting in Firecracker crashing on boot. Finally, the debug assertions added to the code under verification allowed us to identify a handful of unit tests which were not set up correctly. These have also been fixed. 
+We found 5 bugs in our rate limiter implementation, the most significant one a rounding error that allowed guests to exceed their prescribed I/O bandwidth by up to 0.01% in some cases. Additionally, we found one bug in our VirtIO stack, where a malicious guest could set up a virtio queue that partially overlapped with the MMIO memory region, resulting in Firecracker crashing on boot. Finally, the debug assertions added to the code under verification allowed us to identify a handful of unit tests which were not set up correctly. These have also been fixed.
 
 All in all, Kani proof harnesses has proven a valuable defense-in-depth measure for Firecracker, nicely complementing our existing testing infrastructure. We plan to continue our investment in these harnesses as we develop new Firecracker features, to ensure consistently high security standards. To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
