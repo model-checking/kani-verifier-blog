@@ -3,7 +3,7 @@ layout: post
 title: Using Kani to Validate Security Boundaries in AWS Firecracker
 ---
 
-Security assurance is paramount for any system running in the cloud. To take a step foward the highest levels of security, we have applied the [Kani model checker](https://github.com/model-checking/kani) to verify safety-critical properties in core components of the [Firecracker Virtual Machine Monitor](https://firecracker-microvm.github.io/) using mathematical logic.
+Security assurance is paramount for any system running in the cloud. In order to achieve the highest levels of security, we have applied the [Kani model checker](https://github.com/model-checking/kani) to verify safety-critical properties in core components of the [Firecracker Virtual Machine Monitor](https://firecracker-microvm.github.io/) using mathematical logic.
 
 Firecracker is an open source project written in Rust which uses the Linux Kernel-based Virtual Machine (KVM) to create and manage microVMs. Firecracker has a minimalist design which allows fast (~150ms) microVM start-up time, secure multi-tenancy of microVMs on the same host and memory/CPU over-subscription. Firecracker is currently used in production by AWS Lambda, AWS Fargate and parts of AWS Analytics to build their service platforms. 
 
