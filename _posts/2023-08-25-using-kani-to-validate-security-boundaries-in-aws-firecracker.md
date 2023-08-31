@@ -53,7 +53,7 @@ It offers an `auto_replenish` function which computes how many tokens the leaky 
 
 A `TokenBucket` is inherently tied to time-related APIs such as `std::time::Instant`, for which Kani does not have built-in support. This means it is not able to reason about `TokenBucket`s. To solve this problem, we use Kani’s [stubbing](https://model-checking.github.io/kani-verifier-blog/2023/02/28/kani-internship-projects-2022-stubbing.html) to provide a model for the `Instant::now` function. Since Firecracker uses a monotonic clock for its rate-limiting, this stub needs to return non-deterministic monotonically non-decreasing instants.
 
-However, when trying to stub `now`, one will quickly notice that `Instant` does not offer any constructors for creating an instance from, say, a Unix timestamp. In fact, it is impossible to construct an `Instant` outside of the standard library as its fields are private. When in such a situation, the solution is often to go down the call stack of the function that you want to stub, to see if any of the functions further down can be stubbed out instead to achieve the desired effect. In our case, `now` calls functions in (private) OS specific time modules, until it bottoms out at [`libc::clock_gettime`](https://www.gnu.org/software/libc/manual/html_node/Getting-the-Time.html#index-clock_005fgettime).
+However, when trying to stub `now`, one will quickly notice that `Instant` does not offer any constructors for creating an instance from, say, a Unix timestamp. In fact, it is impossible to construct an `Instant` outside of the standard library as its fields are private. When in such a situation, the solution is often to go down the call stack of the function that you want to stub, to see if any of the functions further down can be stubbed out instead to achieve the desired effect. In our case, `now` calls functions in (private) OS-specific time modules, until it bottoms out at [`libc::clock_gettime`](https://www.gnu.org/software/libc/manual/html_node/Getting-the-Time.html#index-clock_005fgettime).
 
 The `clock_gettime` function is passed a pointer to a `libc::timespec` structure, and the `tv_sec` and `tv_nsec` members of this structure are later used to construct the `Instant` returned by `Instant::now`. Therefore, we can use the following stub to achieve our goal of getting non-deterministic, monotonically non-decreasing `Instant`s:
 
@@ -88,7 +88,7 @@ mod stubs {
 }
 ```
 
-Note how the first invocation of this stub will always set `tv_sec = tv_nsec = 0`, as this is what the statics are initialized to. This is an optimization we do because the rate-limiter only cares about the delta between two instants, which will be non-deterministic as long as one of the two instants is non-deterministic. **In order to keep Kani performant, it is important to minimize the number of non-deterministic values, especially if multiplication and division is involved**.
+Note how the first invocation of this stub will always set `tv_sec = tv_nsec = 0`, as this is what the statics are initialized to. This is an optimization we do because the rate-limiter only cares about the delta between two instants, which will be non-deterministic as long as one of the two instants is non-deterministic. **In order to keep Kani performant, it is important to minimize the number of non-deterministic values, especially if multiplication and division are involved**.
 
 Using this stub, we can start writing a harness for `auto_replenish` such as
 
@@ -114,11 +114,11 @@ Let us now see how we can extend this harness to allow us to verify that our rat
 
 Our noisy neighbor mitigation is correct if we always generate the “correct” number of tokens with each call to `auto_replenish`, meaning it is impossible for a guest to do more I/O than configured. Formally, this means
 
-`0 ≤ (now - last_update) - new_tokens ⋅ (refill_time/size) < refill_time/size`
+`0 ≤ (now - last_update) - new_tokens * (refill_time/size) < refill_time/size`
 
 Here, *new_tokens* is the number of tokens that `auto_replenish` generated. The fraction `refill_time/size` is simply the time it takes to generate a single token. Thus, the property states that if we compute the time that it should have taken to generate *new_tokens* and subtract it from the time that actually passed, we are left with an amount of time less than what it would take to generate an additional token: we replenished the maximal number of tokens possible. 
 
-The difficulty of implementing a correct rate limiter is dealing with “leftover” time: If enough time passed to generate “1.8 tokens”, what does Firecracker do with the “0.8” tokens it cannot (as everything is integer valued) add to the budget? Originally, the rate limiter simply dropped these: if you called `auto_replenish` at an inopportune time, then the “0.8” would not be carried forward and the guest essentially “lost” part of its I/O allowance to rounding. Then, with [#3370](https://github.com/firecracker-microvm/firecracker/pull/3370), we decided to fix this by only advancing `last_update` by `new_tokens ⋅ (refill_time/size)` instead of setting it to *now*. This way the fractional tokens will be carried forward, and we even hand-wrote a [proof](https://github.com/firecracker-microvm/firecracker/pull/3370#pullrequestreview-1252110534) to check that `last_update` and the actual system time will not diverge, boldly concluding
+The difficulty of implementing a correct rate limiter is dealing with “leftover” time: If enough time passed to generate “1.8 tokens”, what does Firecracker do with the “0.8” tokens it cannot (as everything is integer valued) add to the budget? Originally, the rate limiter simply dropped these: if you called `auto_replenish` at an inopportune time, then the “0.8” would not be carried forward and the guest essentially “lost” part of its I/O allowance to rounding. Then, with [#3370](https://github.com/firecracker-microvm/firecracker/pull/3370), we decided to fix this by only advancing `last_update` by `new_tokens * (refill_time/size)` instead of setting it to *now*. This way the fractional tokens will be carried forward, and we even hand-wrote a [proof](https://github.com/firecracker-microvm/firecracker/pull/3370#pullrequestreview-1252110534) to check that `last_update` and the actual system time will not diverge, boldly concluding
 
 
 >This means that `last_updated` indeed does not fall behind more than the execution time of `auto_replenish` plus a constant dependent on the bucket configuration.
@@ -133,7 +133,7 @@ debug_assert!((now - last_update) >= time_adjustment);
 debug_assert!((now - last_update - time_adjustment) * size < refill_time);
 ```
 
-we expected the verification to succeed. However, Kani presented us with The “VERIFICATION FAILED”, which was unexpected to say the least.
+we expected the verification to succeed. However, Kani presented us with The “VERIFICATION FAILED” message, which was unexpected to say the least.
 
 So what went wrong? In the hand-written proof, the error was assuming that `-⌊-x⌋ = ⌊x⌋` (had this step been gotten correctly, the bound would have been `refill_time/size` rounded *up*, which obviously allows for violations). To see how our code actually violates the property, we need to have a look at how the relevant part of `auto_replenish` was actually implemented:
 
@@ -148,7 +148,7 @@ let time_adjustment = (tokens * self.refill_time) / self.size
 self.last_update += Duration::from_nanos(time_adjustment);
 ```
 
-The issue lies in the way we compute `time_adjustment`: Consider a bucket of size 2 with refill time 3ns and assume a time delta of 11ns. We compute `11⋅2/3 ≈ 7` tokens, and then a time adjustment of `7⋅3/2 ≈ 10ns`. However, 10ns  is only enough to replenish `10⋅2/3 ≈ 6`  tokens! The problem here is that 7 tokens do not take an integer number of nanoseconds to replenish. They take 10.5ns. However the integer division rounds this down, and thus the guest essentially gets to use those 0.5ns twice. Assuming the guest can time when it triggers down to nanosecond precision, and the rate limiter is configured such that `refill_time/size` is not an integer, the guest could theoretically cause these fractional nanosecond to accumulate to get an extra token every `10⁶ ⋅ refill_time/size ⋅ max(1, refill_time/size)` nanoseconds. **For a rate limiter configured at 1GB/s, this would be an excess of 1KB/s**.
+The issue lies in the way we compute `time_adjustment`: Consider a bucket of size 2 with refill time 3ns and assume a time delta of 11ns. We compute `11*2/3 ≈ 7` tokens, and then a time adjustment of `7*3/2 ≈ 10ns`. However, 10ns  is only enough to replenish `10*2/3 ≈ 6`  tokens! The problem here is that 7 tokens do not take an integer number of nanoseconds to replenish. They take 10.5ns. However the integer division rounds this down, and thus the guest essentially gets to use those 0.5ns twice. Assuming the guest can time when it triggers down to nanosecond precision, and the rate limiter is configured such that `refill_time/size` is not an integer, the guest could theoretically cause these fractional nanoseconds to accumulate to get an extra token every `10⁶ * refill_time/size * max(1, refill_time/size)` nanoseconds. **For a rate limiter configured at 1GB/s, this would be an excess of 1KB/s**.
 
 The fix for this was to round up instead of down in our computation of `time_adjustment`. For the complete code listing of the rate limiter harnesses, see [here](https://github.com/firecracker-microvm/firecracker/blob/1a2c6ada116b52df891857d3e82503ad1ef845e5/src/vmm/src/rate_limiter/mod.rs#L525).
 
@@ -162,7 +162,7 @@ The Firecracker side of this queue implementation sits right at the intersection
 >From a security perspective, all vCPU threads are considered to be running malicious code as soon as they have been started; these malicious threads need to be contained.
 
 
-The entirety of the VirtIO queue lives in shared memory and can thus be written to by the vCPU threads. Therefore, Firecracker cannot make any assumptions about its contents. In particular, it needs to operate securely no matter the memory content. For anyone who has worked with Kani before, this yearns for a generous application of `kani::any()`. We can set up an area of non-deterministic guest memory as follows:
+The entirety of the VirtIO queue lives in shared memory and can thus be written to by the vCPU threads. Therefore, Firecracker cannot make any assumptions about its contents. In particular, it needs to operate securely no matter the memory content. For anyone who has worked with Kani before, this yearns for a generous application of `kani::vec::exact_vec`, which generates a fixed size vector filled with arbitrary values. We can set up an area of non-deterministic guest memory as follows:
 
 ```rs
 fn arbitrary_guest_memory() -> GuestMemoryMmap {
@@ -277,7 +277,7 @@ fn verify_spec_2_6_7_2() {
 }
 ```
 
-Beyond these specification conformance harnesses, we also have standard “absence of panics” harnesses, which lead us to discover an issue in our code which validates the in-memory layout of VirtIO queues. A guest could [trigger a panic in Firecracker](https://github.com/firecracker-microvm/firecracker/commit/7909c5e6d023cbac98a5b16430d53d13370cf8be) by placing the starting address for a VirtIO queue component into the MMIO gap.
+Beyond these specification conformance harnesses, we also have standard “absence of panics” harnesses, which led us to discover an issue in our code which validates the in-memory layout of VirtIO queues. A guest could [trigger a panic in Firecracker](https://github.com/firecracker-microvm/firecracker/commit/7909c5e6d023cbac98a5b16430d53d13370cf8be) by placing the starting address for a VirtIO queue component into the MMIO gap.
 
 ## Conclusion
 
