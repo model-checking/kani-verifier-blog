@@ -159,7 +159,7 @@ Firecracker is a para-virtualization solution, meaning the guest is aware that i
 The Firecracker side of this queue implementation sits right at the intersection between guest and host. According to Firecracker’s [threat model](https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md#threat-containment):
 
 
->From a security perspective, all vCPU threads are considered to be running malicious code as soon as they have been started; these malicious threads need to be contained.
+>From a security perspective, all vCPU threads are considered to be running untrusted code as soon as they have been started; these untrusted threads need to be contained.
 
 
 The entirety of the VirtIO queue lives in shared memory and can thus be written to by the vCPU threads. Therefore, Firecracker cannot make any assumptions about its contents. In particular, it needs to operate securely no matter the memory content. For anyone who has worked with Kani before, this yearns for a generous application of `kani::vec::exact_vec`, which generates a fixed size vector filled with arbitrary values. We can set up an area of non-deterministic guest memory as follows:
@@ -283,6 +283,6 @@ Beyond these specification conformance harnesses, we also have standard “absen
 
 Thanks to Kani, the Firecracker team was able to verify critical areas of code that were intractable to traditional methods. These include our noisy-neighbor mitigation, a rate limiter, where interactions with the system clock resulted in traditional testing being unreliable, as well as our VirtIO stack, where the interaction with guest memory lead to a state space impossible to cover by other means.
 
-We found 5 bugs in our rate limiter implementation, the most significant one a rounding error that allowed guests to exceed their prescribed I/O bandwidth by up to 0.01% in some cases. Additionally, we found one bug in our VirtIO stack, where a malicious guest could set up a virtio queue that partially overlapped with the MMIO memory region, resulting in Firecracker crashing on boot. Finally, the debug assertions added to the code under verification allowed us to identify a handful of unit tests which were not set up correctly. These have also been fixed.
+We found 5 bugs in our rate limiter implementation, the most significant one a rounding error that allowed guests to exceed their prescribed I/O bandwidth by up to 0.01% in some cases. Additionally, we found one bug in our VirtIO stack, where a untrusted guest could set up a virtio queue that partially overlapped with the MMIO memory region, resulting in Firecracker crashing on boot. Finally, the debug assertions added to the code under verification allowed us to identify a handful of unit tests which were not set up correctly. These have also been fixed.
 
 All in all, Kani proof harnesses has proven a valuable defense-in-depth measure for Firecracker, nicely complementing our existing testing infrastructure. We plan to continue our investment in these harnesses as we develop new Firecracker features, to ensure consistently high security standards. To learn more about Kani, check out the [Kani tutorial](https://model-checking.github.io/kani/kani-tutorial.html) and our [previous blog posts](https://model-checking.github.io/kani-verifier-blog/).
