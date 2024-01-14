@@ -1,26 +1,65 @@
 # Function Contracts for Kani
 
-I this blogpost we discuss a new feature we’re developing for Kani: Function Contracts. It’s now available as an unstable feature with the `-Zfunction-contracts` flag. If you would like to learn more about the development and implementation details of this feature and leave feedback please refer to [the RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html).
+I this blogpost we discuss a new feature we’re developing for Kani: Function Contracts. It’s now available as an unstable feature with the `-Zfunction-contracts` flag. If you would like to learn more about the development and implementation details of this feature please refer to [the RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html). If you try out this new feature and want to leave feedback join the discussion in [the feature tracking issue](https://github.com/model-checking/kani/issues/2652).
 
 ## Introduction
 
-Verification is a costly art. If you are an active user of Kani you know that the runtime of a proof does not scale linearly with the amount of code under verification and you probably have a number of functions and ideas for harnesses you’d like Kani to verify, but it just takes prohibitively long.
+In today's blogpost we want to introduce you to a new concept that lets us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
 
-We [previously](https://model-checking.github.io/kani-verifier-blog/2023/02/28/kani-internship-projects-2022-stubbing.html) blogged about stubbing, a technique where a function that performs a costly computation, for instance trough recursion or a long running loop, could be replaced with a function that is cheaper to execute in the verifier. This replacement approximates the behavior of the function it replaces and/or uses techniques only available in a verifier, like non-deterministic values (`kani::any`). By successively replacing costly functions with stubs Kani can check ever larger proofs but it also comes with a downside.
+The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the firecracker microvm by modularly verifying an implementation of Newton’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
-As we discussed in the [section on risks](https://model-checking.github.io/kani-verifier-blog/2023/02/28/kani-internship-projects-2022-stubbing.html#risks-of-stubbing) stubbing is a powerful tool with few guard rails. In principle you can stub a function with any other function, so long as the type signature matches. Of course any user of stubs is going to be careful to align the behavior of the function being stubbed and the stub. However the whole point of stubbing is that the stub doesn’t behave exactly as the function it replaces, because it needs to be faster. If the approximation is incorrect, it leads to *unsoundness*, meaning that verification can succeed in spite of a bug being present.
+## The Example: Firecracker’s `TokenBucket`
 
-In today's blogpost we want to introduce you to a new concept that lets us verify larger programs without sacrificing soundness: function contracts. The idea is very simple: like a stub the contract approximates the behavior of a function in an efficient way, allowing us to scale and verify larger programs. However with a contract the verifier automatically checks that the approximation is sound so we can be confident in the results of our verification.
+We will explore employing a function contract when verifying the methods of `TokenBucket` in the `vmm` module of the firecracker microvm. To keep the example concise we will use the relatively simple `TokenBucket::new` function and its verification harness. The code is slightly simplified and we also use a recursive implementation of `gcd`. Firecracker actually uses a `gcd` with a loop which would need loop contracts to verify inductively. These are not supported yet by Kani, but conceptually they function the same way as function contracts. You can find the original version of all harnesses and verified code [here](https://github.com/firecracker-microvm/firecracker/blob/a774e26d63981fc031b974741a39519b08a61d3b/src/vmm/src/rate_limiter/mod.rs).
 
-## Dangers of Stubbing
-
-Let us illustrate this with an example. Consider Euclid’s formula for calculating the greatest common divisor of two numbers, here called `max` and `min`. For verification this would be considered an expensive computation due to the recursive call. This recursion is very busy, in the [worst case](https://en.wikipedia.org/wiki/Euclidean_algorithm#Worst-case) the number of steps (recursions) approaches 1.5 times the number of bits needed to
-represent the number. Meaning that for two large 32 bit numbers it can take almost 48 iterations for a single call to `gcd`. If a harness that uses `gcd` does not heavily constrain the input, Kani would have to unroll the recursion 48 times and then execute it symbolically. An expensive operation.
+Lets first look at the harness that tests `TokenBucket::new`. It is straightforward, setting up a series of non-deterministic inputs, calling the function under verification and then asserting a validity condition.
 
 ```rust
-fn gcd(mut max: i32, mut min: i32) -> i32 {
+#[kani::proof]
+fn verify_token_bucket_new() {
+    let size = kani::any_where(|s| *s != 0);
+    let one_time_burst = kani::any();
+    let complete_refill_time_ms = kani::any_where(|t|
+        *t != 0 && *t < u64::MAX / NANOSEC_IN_ONE_MILLISEC
+    );
+
+    let bucket = TokenBucket::new(size, one_time_burst, complete_refill_time_ms).unwrap()
+    assert!(bucket.is_valid());
+}
+```
+
+Since the most important call here is to `TokenBucket::new` let’s take a closer look at its implementation.
+
+```rust
+pub fn new(size: u64, one_time_burst: u64, complete_refill_time_ms: u64) -> Option<Self> {
+    if size == 0 || complete_refill_time_ms == 0 {
+        return None;
+    }
+    let complete_refill_time_ns =
+        complete_refill_time_ms.checked_mul(NANOSEC_IN_ONE_MILLISEC)?;
+    let common_factor = gcd(size, complete_refill_time_ns);
+    let processed_capacity: u64 = size / common_factor;
+    let processed_refill_time: u64 = complete_refill_time_ns / common_factor;
+
+    Some(TokenBucket {
+        size,
+        one_time_burst,
+        initial_one_time_burst: one_time_burst,
+        refill_time: complete_refill_time_ms,
+        budget: size,
+        last_update: Instant::now(),
+        processed_capacity,
+        processed_refill_time,
+    })
+}
+```
+
+Most of what happens here is just a series of divisions, with the exception of this call: `gcd(size, complete_refill_time_ns)` so let us look at that function next:
+
+```rust
+fn gcd(mut max: u64, mut min: u64) -> u64 {
     if min > max {
-				std::mem::swap(&mut max, &mut min);
+        std::mem::swap(&mut max, &mut min);
     }
 
     let rest = max % min;
@@ -29,162 +68,181 @@ fn gcd(mut max: i32, mut min: i32) -> i32 {
 
 ```
 
-To verify efficiently we would employ a stub for this function that uses assumptions and non-deterministic values to avoid a loop. Our first attempt at stubbing may be very simply that the return value of `gcd` is smaller than its inputs.
+This is by far the costliest part of the code of `TokenBucket::new`. The rest of the function was a fixed set of divisions, but here we have a division and a recursive call back to `gcd`. It is not immediately obvious how busy this computation is but in the [worst case](https://en.wikipedia.org/wiki/Euclidean_algorithm#Worst-case) the number of steps (recursions) approaches 1.5 times the number of bits needed to represent the input numbers. Meaning that for two large 64 bit numbers it can take almost 96 iterations for a single call to `gcd`. Recall that our smallest input to `TokenBucket::new` is a non-deterministic value in the range $0< x < 18446744073709$ (up to 45 non-zero bits). If a harness that uses `gcd` does not heavily constrain the input, Kani would have to unroll the recursion at least 68 times and then execute it symbolically. An expensive operation.
+
+Since `gcd` is the most expensive part of verifying this harness it is an ideal target for using a contract to make it more efficient. In fact by replacing it with a contract we not only make this harness more efficient but in fact any harness that uses `gcd` directly or indirectly (for instance by calling `TokenBucket::new`. In firecracker for instance there are three more harnesses that all call `gcd` and thus benefit from modular verification.
+
+## Introducing a Function Contract
+
+Function contracts are conceptually rather simple actually. They comprise a set of conditions which characterize the behavior of the function, similar to the conditions you would use in a test case. There are different types of conditions which are also called the *clauses* of the contract. The first type of clause we will introduce here is the `ensures` clause.
 
 ```rust
-fn gcd_stub(max: i32, min: i32) -> i32 {
-    let result = kani::any();
-    kani::assume(result < max && result < min);
-    result
+#[kani::ensures(max % result == 0 && min % result == 0 && result != 0)]
+fn gcd(mut max: u64, mut min: u64) -> u64 {
+    if min > max {
+        std::mem::swap(&mut max, &mut min);
+    }
+
+    let rest = max % min;
+    if rest == 0 { min } else { gcd(min, rest) }
 }
 
 ```
 
-Now you may immediately notice that this stub is not correct if `max == min`, in which case `gcd` would return `min`, whereas `gcd_stub` would return a non-deterministic value smaller than `min`. If this is used in a harness it can miss a classic off-by-one error.
+The `ensures` clause describes the relationship of the return of the function with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had ben joined with `&&`. Our example could thus also have been written as
 
 ```rust
-#[kani::proof]
-#[kani::stub(gcd, gcd_stub)]
-fn main() {
-    let x = kani::any();
-    kani::assume(x <= 100);
-    let y = kani::any();
-
-    let v : Vec<i32> = (0..100).collect();
-
-    v[gcd(x, y)]
-}
-
+#[kani::ensures(max % result == 0)]
+#[kani::ensures(min % result == 0)]
+#[kani::ensures(result != 0)]
+fn gcd(mut max: u64, mut min: u64) -> u64 { ... }
 ```
 
-This harness will succeed *despite* the fact that for `x == 100` we are
-accessing out of bounds of the vector. To guard against this problem we can
-check that the assumptions we make in the stub hold for the actual result of
-running `gcd`. This means we ensure that the stub is an overapproximation. This
-harness mirrors our stub but flips the assumption to an assertion. Checking the
-harness will fail and alert us that we would have to change our stub to at least
-`result <= max` and `result <= min` to be *sound*.
+You may wonder at this point what this is actually useful for. It turns out that for a verifier the *abstraction* of the function as described by the conditions in our `ensures` clause, is much easier to reason about than running through the many recursive calls in the actual implementation of `gcd`. You may also notice that the abstraction only approximate `gcd`. `max % result == 0` and `min % result == 0` describe *a* common divisor of `max` and `min` but not necessarily the *greatest*. However in this case this is acceptable to us when it comes to verifying the callers of `gcd`. Later we will add an additional check to ensures we generate the largest divisor.
+
+Our goal will be to eventually use the efficient abstraction everywhere where `gcd` is called but first we must ensure that `gcd` respects these conditions. We need to *verify the contract*.
+
+Doing so is the same as verifying that the postcondition(s) hold for any possible input to the function. If we were to manually create a harness that does this verification it would look like this
 
 ```rust
 #[kani::proof]
-fn gcd_stub_check() -> i32 {
+fn gcd_stub_check() {
+    // First we create any possible input using a
+    // non-deterministic value
     let max = kani::any();
     let min = kani::any();
+
+    // We create any possible result
     let result = gcd(max, min);
-    kani::assert(result < max && result < min && result != 0);
+
+    assert!(
+        // And here is our postcondition
+        max % result == 0 && min % result == 0 && result != 0
+    );
 }
 
 ```
 
-## Checking Contracts
+If we run this harness however we will discover a verification failure, because of a division by `0` in `let rest = max % min;` which brings us to the introduction of the second type of clause: `requires`.
 
-What we just did is manually created a function contract. We used the condition `result <= max && result <= min && result != 0` both as an approximation of `gcd` and
-also to check it against the actual implementation. This is precisely the idea
-behind a function contract. To create a condition that describes the function
-behavior and use it both for checking and as a stub. So now with Kani's new
-function contract feature we can write *just* the contract condition and Kani
-will generate the check and the stub for us automatically.
+## Preconditions
+
+Sometimes functions, such as our `gcd` are not defined for all of their possible input (e.g. they panic on some). Function contracts let us express this using a condition that must hold at the beginning (*pre*) of a function’s execution: a *precondition*. This condition limits the inputs for which a contract will be checked during verification and it will also be used to ensure that, if we use the contract conditions for modular verification we don’t do it with any values that the function would not be defined for. We can add a `requires` clause to `gcd` like so
 
 ```rust
-#[kani::ensures(result < max && result < min && result != 0)]
-fn gcd(mut max: i32, mut min: i32) -> i32 {
-    if min > max {
-		std::mem::swap(&mut max, &mut min);
-    }
+#[kani::requires(max != 0 && min != 0)]
+#[kani::ensures(max % result == 0 && min % result == 0 && result != 0)]
+fn gcd(mut max: u64, mut min: u64) -> u64 { ... }
+```
 
-    let rest = max % min;
-    if rest == 0 { min } else { gcd(min, rest) }
+As with postconditions, the precondition allows any rust `bool` expressions that do not modify heap memory or perform I/O and multiple `requires` clauses act as though they were joined with `&&`.
+
+To understand how this makes our contract verification succeed lets integrate it into the manual harness we had written before.
+
+```rust
+#[kani::proof]
+fn gcd_stub_check() {
+    // First we create any possible input using a
+    // non-deterministic value
+    let max = kani::any();
+    let min = kani::any();
+
+    // Limit the domain of inputs with precondition
+    kani::assume(max != 0 && min != 0);
+
+    // We create any possible result
+    let result = gcd(max, min);
+
+    assert!(
+        // And here is our postcondition
+        max % result == 0 && min % result == 0 && result != 0
+    );
 }
 
 ```
 
-In this example we are using an `ensures` clause. This clause states a property
-which must hold after the execution of the function, also called a
-*postcondition*. Kani is lenient, allowing arbitrary Rust expressions as part of
-the `ensures` clause, including function calls. Take note however that the
-expressions in the `ensures` clause may not allocate, deallocate or modify heap
-memory or perform I/O. Multiple `ensures` clauses are allowed and they work as
-though they were joined with `&&`. Our example could thus also have been written
-as
+Running this in Kani succeeds, giving us confidence that now our contract properly approximates the effects of `gcd`.
 
-```rust
-#[kani::ensures(result < max)]
-#[kani::ensures(result < min)]
-#[kani::ensures(result != 0)]
-fn gcd(mut max: i32, mut min: i32) -> i32
-{ ... }
-
-```
-
-Unfortunately while Kani can generate the check for us it cannot automatically
-generate the non-deterministic inputs yet. It would be easy for simple cases
-like this (shown below), but the general case is difficult and sometimes impossible, especially in the presence of pointers. For the time being we ask
-the user to provide the harness.
-
-The harness only needs to set up the non-deterministic inputs. The actual
-conditions for checking the contract are inserted by Kani in the right places
-automatically. Harnesses for contracts use the `proof_for_contract` attribute
-which mentions the function that should have its contract checked. Otherwise
-they act like any other `kani::proof` and admit additional annotations such as
-`kani::unwind`, `kani::solver` and even `kani::stub`.
-
-```rust
-#[kani::proof_for_contract(gcd)]
-fn gcd_check_harness() {
-    gcd(kani::any(), kani::any());
-}
-
-```
+You may be wondering now why we’ve even written the `requires` and `ensures` clause, given that we verified it using a harness we wrote ourselves. Well in actuality Kani will do most of it for you. We will see [later](#a-bit-of-cleanup) exactly how little is needed to verify the contract, for now you may assume that Kani does it for you automatically.
 
 ## Using Contracts
 
-Any function that has at least one contract API clause attached is considered
-to "have a contract" by Kani. `ensures` is one type of clause in the function
-contract API. There is also the `requires` clause for specifying preconditions
-and `modifies`, a refinement of `mut`. We will dive into those in more detail
-later.
+We have proved that our function upholds the contract we specified so now we can use the abstraction at the call sites.
 
-Functions that "have a contract" (at least one clause specified) can be stubbed
-with that contract in any harness except its own `proof_for_contract`. The
-annotations to do so is `kani::stub_verified(...)` and mentions the function to
-stub. So returning to the example from before our harness would look as follows
+If we cast our mind back to the implementation of `TokenBucket::new` we can replace the function as follows:
+
+```rust
+pub fn new(size: u64, one_time_burst: u64, complete_refill_time_ms: u64) -> Option<Self> {
+    if size == 0 || complete_refill_time_ms == 0 {
+        return None;
+    }
+    let complete_refill_time_ns =
+        complete_refill_time_ms.checked_mul(NANOSEC_IN_ONE_MILLISEC)?;
+
+    // Make sure the precondtions are respected
+    assert!(size != 0 && complete_refill_time_ns != 0);
+    // Create a non-deterministic value for the result
+    let common_factor = kani::any();
+    // Assume that the postconditions hold (as we know they would)
+    kani::assume(
+            common_factor % size == 0
+        && complete_refill_time_ns % common_factor == 0
+        && common_factor != 0
+    );
+
+    let processed_capacity: u64 = size / common_factor;
+    let processed_refill_time: u64 = complete_refill_time_ns / common_factor;
+
+    Some(TokenBucket {
+        size,
+        one_time_burst,
+        initial_one_time_burst: one_time_burst,
+        refill_time: complete_refill_time_ms,
+        budget: size,
+        last_update: Instant::now(),
+        processed_capacity,
+        processed_refill_time,
+    })
+}
+```
+
+We have now replaced the potential 68 unrollings and multiplications of `gcd` with a single check and one assumption, all of which the verifier can reason about efficiently.
+
+Of course we wouldn’t replace the calls to `gcd` by hand. In fact we are not going to make any changes to the code under verification. Instead we will instruct Kani to perform this replacement for us using a new attribute for the harness: `stub_verified`.
 
 ```rust
 #[kani::proof]
 #[kani::stub_verified(gcd)]
-fn main() {
-    let x = kani::any();
-    kani::assume(x <= 100);
-    let y = kani::any();
+fn verify_token_bucket_new() {
+    let size = kani::any_where(|s| *s != 0);
+    let one_time_burst = kani::any();
+    let complete_refill_time_ms = kani::any_where(|t|
+        *t != 0 && *t < u64::MAX / NANOSEC_IN_ONE_MILLISEC
+    );
 
-    let v : Vec<i32> = (0..100).collect();
-
-    v[gcd(x, y)]
+    let bucket = TokenBucket::new(size, one_time_burst, complete_refill_time_ms).unwrap()
+    assert!(bucket.is_valid());
 }
-
 ```
 
-Note that as opposed to `stub` `stub_verified` only takes one argument. As the
-name suggests `stub_verified` ensures that the contract passes its checking
-harness and thus is a sound replacement for the original function body.
+This attribute works similarly to `kani::stub` which we’ve explored in a [previous post](https://model-checking.github.io/kani-verifier-blog/2023/02/28/kani-internship-projects-2022-stubbing.html). In short, the attribute replaces each call to `gcd` that is reachable from the harness with new code. In fact, under the hood, `stub_verified` uses `stub` but instead of replacing `gcd` by some arbitrary function, it is replaced with the abstraction from the contract, the same way we did before manually.
 
 ## Inductive Verification
 
-A great feature of contracts is that for recursive functions the stubbing of the
-contract can also be used during the checking also, eliminating the recursive
-call. This is known as *inductive verification* and it can reduce multiple
-rounds of verification to just one step. Our example actually already takes
-advantage of this. The `gcd` function is verified in a single step, using the
-verified stub on the recursive call. If we constructed this proof manually,
-inlining the check and induction for `gcd` in its harness it would look
-something like this. Note that it no longer contains any recursion or loops.
+The discerning reader might already notice that, if we can replace every call to `gcd` with the contract, then would we be able to do this also *within* `gcd`? The answer is **yes** we can, and it will allow us to completely skip unrolling `gcd`, even when verifying the implementation against its contract. This technique is called *inductive verification* and it substantially improves the performance of verifying recursive functions. Side note: there are also loop contracts which enable inductive verification for loops. They are not yet supported in Kani.
+
+You may be skeptical as to how this can work. As mentioned before, replacing the call to `gcd` is only safe because we previously verified the function against its contract so how would it be safe to already use the replacement *while* we’re still verifying the contract? Let us first look at what a manual harness for inductive verification of `gcd` would look like and step through it to convince ourselves that this is valid.
 
 ```rust
 #[kani::proof]
 fn gcd_expanded_inductive_check() -> i32 {
+        // Unconstrainted, non-deterministic inputs
     let max = kani::any();
     let min = kani::any();
     let result = {
+        // Preconditions
+        kani::assume(max != 0 && min != 0);
+
         // Inlined first execution of `gcd`
         if min > max {
             std::mem::swap(&mut max, &mut min);
@@ -195,68 +253,80 @@ fn gcd_expanded_inductive_check() -> i32 {
             // Inlined recursion
             let max = min;
             let min = rest;
+                        // Make sure preconditions are respected for recursion
+                        assert!(max != 0 && min != 0);
             let result = kani::any();
-            kani::assume(result < max && result < min && result != 0);
+            kani::assume(max % result == 0 && min % result == 0 && result != 0);
             result
         }
     };
-    // Checking of the postcondition
-    kani::assert(result < max && result < min && result != 0);
+    // Make sure postconditions hold
+    assert!(max % result == 0 && min % result == 0 && result != 0);
 }
-
 ```
 
-**TODO:** Closing paragraph
+First it is helpful to think about the the recursion as a sequence of individual steps that build on top of one another, like a pyramid. Each step performs the same computation, but with different inputs, because the previous step calls into it with `min` and `rest`, which differ from `max` and `min`. Now consider the first step. It is called with non-deterministic inputs that are only constrained by the precondition, e.g. the line `kani::assume(max != 0 && min != 0)`. Then a computation is performed to calculate `min` and `rest` that is used for the recursive call and at the end the postconditions are enforced with `assert!(max % result == 0 && ...)`. What does that mean? It means if this step passes verification we can be sure that the postconditions hold for the inputs we verified with, e.g. any combination of `max` and `min` that satisfies `max != 0 && min != 0`. Now lets consider again the recursive call. We call with `min` and `rest` which are not the same as `max` and `min`. However remember that actually what our first step verification proves not just that the postconditions hold for *a* `max` and `min`, but in fact for *any* `max` and `min`, so long as the precondition is satisfied. Therefore we can conclude that it will also hold for `gcd(min, rest)`, if `min` and `rest` satisfy the preconditions, e.g. `min != 0 && rest != 0`. And that is precisely what is enforced where the abstraction is employed with `assert!(max != 0 && min != 0)`.
 
-## Havocking and `modifies`
+To put it another way, when we recurse, we are allowed to assume that the verification passed, because the step that we are currently verifying is being checked for any possible input, including the one we are recursing with. If a problem were to occur anywhere in the recursive calls, we would see the same problem as a verification failure of the first step.
 
-Verified stubs work by replacing the return value of the function with
-`kani::any()` and `kani::assume`ing the postcondition. However functions may
-also modify mutable inputs such as `&mut` references instead or in addition to
-returning a value. By default Kani will forbid any assignment or modification of
-mutable reference arguments. Each mutable reference you want to assign must be mentioned in a `modifies` clause.
+Notice that using this trick, we reduced the up to 64 unrollings to just one, a substantial win. What is even better that doing this requires no input from you. Kani does this automatically. Any function with a contract is always verified inductively. Side note: this works even if the recursive call is not direct but buried somewhere in the call chain.
 
-**TODO:** Finish section
+## A bit of Cleanup
 
-## Closing
-
-**TODO:** Finish Section
-
-## Soundness
-
-Stubs can deviate from the behavior of the function it replaces in two ways. A stub can produce values that the original function wouldn’t. This is called *overapproximating* because the set of  output values from the stub is larger than that of the original function. Down the line those extra values can cause verification failure, because the code assumes that they cant occur. This is actually not a problem for soundness since the verification still fails, it is just annoying.
-
-A more serious problem is *underapproximation*, which is when the stub doesn’t produce certain values the original function would. Adapting a humorous [example from XKCD](https://xkcd.com/221/) here if we were to stub a `random` function by one that just returns `4` and subsequently index into a vector of length `5` then it is clear that, while the verification succeeds, there is a high likelihood of a panic at runtime.
+Before we close with the example, a few more details about the contract verification process. I told you earlier that Kani does most of the contract verification work for you. It injects the pre- and postconditions and sets up the inductive verification. However a small amount of manual but important labor is required by the user. Specifically Kani is not able to generate the non-deterministic inputs and so it requires the user to write a simple harness. In this case it would look like this:
 
 ```rust
-fn getRandomNumber() -> u32 {
-		4  // chosen by fair dice roll
-       // guaranteed to be random
+#[kani::proof_for_contract(gcd)]
+fn gcd_stub_check() {
+    // Create non-determinstic values
+    let max = kani::any();
+    let min = kani::any();
+
+    gcd(max, min)
 }
 
-#[kani::proof]
-#[kani::stub(rand::random, getRandomNumber)]
-fn my_program() {
-		let v = vec![1;5];
-		let i : u32 = rand::random();
-
-		println!("{}", v[i as usize]);
-}
 ```
 
-I summary: *unsoundness* means that a bug is possible at runtime but not caught by the verification and it arises when a stub *underapproximates* the function it replaces.
+This may be surprising to you since, in our example, we use a straightforward `kani::any()`. Indeed for finite types like `u64` that implement `Arbitrary` Kani *could* generate this harness automatically. However for any type involving references or pointers (like `Vec`) Kani is unable to generate the harness. Because it would be confusing if sometimes the harness is generated automatically and sometimes not, we decided that for the time being a manual harness is always required. We are working on adding auto generation in the future.
 
-## Tips and Tricks
+A few words about writing contract harnesses: The harness should generate completely unconstrained values, otherwise the verification will be unsound. Usually this means calling `kani::any()`. Sometimes it is not possible to create completely unconstrained values, as is the case with recursive types and array-backed types. In these cases you must use careful judgement and ensure that the value you create is large enough to exercise all possible behaviors of the function. You can think of this as covering all branches.
 
-### Stubs for Non-local Functions
+Finally I told you we would be adding a check to ensure that our `gcd` actually produces the greatest divisor. For this we will need a separate harness and in this case we sadly cannot use any contract substitution. The reason is that, if we substitute, we get values that satisfy the postcondition, but nothing more. Since the postcondition does not ensure the result is the largest divisor possible, it won’t be.
 
-Attributes for attaching contracts only work on crate-local items but you may
-wish to stub an out of crate function. There is currently no builtin way to do
-so but you can achieve the same effect using a technique known as the "double
-stub". The idea is to first stub an external function to a local function that
-immediately calls the external function. Then the desired contract is attached
-to this local function which is then then stubbed as a `stub_verified` using the
-contract.
+```rust
+#[kani::proof]
+fn gcd_greatest_check() {
+    // Create non-determinstic values
+    let max = kani::any();
+    let min = kani::any();
+
+    let result = gcd(max, min);
+
+    let greatest = kani::any_where(|a|
+        max % *a == 0 && min % *a == 0
+    );
+    assert!(!(greatest > result));
+}
+
+```
+
+Currently our function contracts can’t express that the result is the largest divisor, which necessitates this additional harness. In future Kani’s function contracts will be extended with *quantifiers*, which will allow the postcondition to express this property.
+
+## Concluding the Example
+
+This concludes our walkthrough of function contracts and inductive verification for the firecracker example. We have seen how functions can be abstracted using the `requires` and `ensures` clause. We have seen how Kani would verify the contract holds efficiently, using inductive verification. We then saw how after verification we can use the cheap contract in other proofs that call `gcd`.
+
+You can use function contracts yourself with Kani since version 0.33.0. To enable the feature use `-Zfunction-contracts`. For an overview of the API, including all supported types of clauses, see our [rustdocs](https://model-checking.github.io/kani/crates/doc/kani/contracts/index.html). If you decide to try out this new feature we would very much like to hear your feedback, so join the discussion in the [feature tracking issue](https://github.com/model-checking/kani/issues/2652).
+
+There are more features in the pipeline for contracts. In the near future we are focusing on better support for mutable pointers. For more information on implementation details and features to come take a look at the [RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html).
+
+What follows hereafter are a few more sections with additional information, such as the `modifies` clause used to reason about mutable memory, history expressions and a comparison with the stubbing feature we explored in an [earlier blog post](https://model-checking.github.io/kani-verifier-blog/2023/02/28/kani-internship-projects-2022-stubbing.html).
+
+---
+
+## A Neat Trick: Contracts for Non-local Functions
+
+Attributes for attaching function contracts only work on crate-local items but you may wish to stub an out of crate function. There is currently no builtin way to do so but you can achieve the same effect using a technique known as the "double stub". The idea is to first stub an external function to a local function that immediately calls the external function. Then the desired contract is attached to this local function which is then then stubbed as a `stub_verified` using the contract.
 
 ```rust
 use external_crate::gcd;
@@ -280,19 +350,56 @@ fn harness() {
 
 ```
 
-The order of `stub` and `stub_verified` does not matter. With this technique we
-can attach a contract to the external `gcd` without having to change the code of
-`function_under_verification`. Unlike other uses of stubbing this does not pose a
-threat to soundness because the potentially unsound `stub` effectively replaces
-`gcd` with itself.
+The order of `stub` and `stub_verified` does not matter. With this technique we can attach a contract to the external `gcd` without having to change the code of `function_under_verification`. Unlike other uses of stubbing this does not pose a threat to soundness because the potentially unsound `stub` effectively replaces `gcd` with itself.
 
-## Missing
+## Soundness and Comparison with Stubbing
 
-- Absent features
-    - havocking for references
-    - Interior mutability
-- Planned features
-- Motivation for design
-- Why we picked e.g. rust expressions as design for e.g. the assigns clause.
-- Tips and tricks
-    - using a bound on the check harness (is unsound but can be helpful)
+Function contracts and stubbing are closely related as both allow the replacement of a costly computation with a cheap one via harness attributes. The crucial difference is that contracts preserve soundness. We will get into more detail later, but put simply: function contracts being sound means you can trust a successful verification.
+
+Conceptually stub `#[kani::stub(target, source)]` replaces all calls to `target` with `source` with weak constraints on what `source` is. `source` needs to be a function definition with a signature such that each call after the replacement typechecks. The details of what that means are unimportant, what matters is that no behavioral equivalence is checked beyond type compatibility.
+
+To illustrate this, lets consider an [example from XKCD](https://xkcd.com/221/) which stubs a `random` function by one that just returns `4`. This type of use of stubbing is completely legal and would not lead to a type error or verification failure.
+
+```rust
+// extern
+crate rand {
+    pub fn random<T>() -> T
+    where
+        Standard: Distribution<T>;
+}
+
+fn getRandomNumber() -> u32 {
+    4  // chosen by fair dice roll
+       // guaranteed to be random
+}
+
+#[kani::proof]
+#[kani::stub(rand::random, getRandomNumber)]
+fn my_program() {
+    let v = vec![1;5];
+    let i : u32 = rand::random();
+
+    println!("{}", v[i as usize]);
+}
+```
+
+It is rather obvious that `getRandomNumer` is not the same as `rand::random`. In the harness included in the example we can see how this leads to problems. After the stubbing is applied the random number is always going to be 4, which means the verification of the harness will succeed. However at runtime, where `rand::random` is no longer replaced a number greater than 4 can be produced and cause a panic. This type of situation where a runtime panic is not caught by verification is referred to as a *violation of* *soundness* or *unsoundness*.
+
+When *soundness* is preserved that means that any runtime problem (such as a panic) cause a verification failure. Dually if soundness is violated then verification succeeds, but a runtime error is still possible. As you may imagine unsoundness significantly weakens the usefulness of a verifier. After all why bother verifying if we can still get issues at runtime? As a result verifiers like Kani take great care to preserve soundness. Stubbing is one of the features that ***can*** introduce unsoundness. As a result it is important to ensure that, at least for the code under verification, any stub behaves like the function it replaces. For instance it is completely sound to replace `rand::random` with a non-deterministic value with the following implementation.
+
+```rust
+fn getRandomNumber() -> u32 {
+    kani::any() // actually all possible values
+                // guaranteed to be random
+}
+```
+
+The verifier cannot execute the actual `rand::random`, because that relies on a syscall that returns a source of randomness from the machine, and so we need to replace it with something for the purposes of verification and since non-deterministic values are actually equivalent to random values this use of stubbing is useful, safe and necessary.
+
+You may wonder how we can determine whether a given situation is sound. We do this by inspecting the relationship between the a function and its replacement. The replacement, by design, always approximates the behavior of the code it replaces and the question is how it does this. Conceptualize the original function as simply a black box that produces a set of possible outputs. If it’s replacement produces a subset of the outputs then that is called an *underapproximation*, which causes unsoundness. We see this in our example where `getRandomNumber` produced fewer (e.g. only the integer `4`) instead of all possible outputs (all `u32` integers). Conversely if the replacement produces a superset of outputs this is called an *overapproximation* and crucially always sound!
+
+Side note: the model of the black box function also extends to functions that take arguments, though in this case we have to consider separately the output sets for every combination of argument values.
+
+Function contracts are designed such that they are always overapproximations and thus sound. This is guaranteed by the following: any value the implementation produces must pass the postcondition, but not every value that passes the postcondition must be produced by the implementation. During replacement with the contract all values that pass the postcondition are created, thus a superset of the actual outputs.
+
+In our contract design there however a remaining source of unsoundness, which is the manual harnesses for verifying contracts. This was mentioned before but as a small recap: if a manual harness restricts the input such that certain behaviors of the function and contract under verification are not covered, unsoundness arises.
