@@ -1,16 +1,16 @@
 # Function Contracts for Kani
 
-In this blogpost we discuss a new feature we’re developing for Kani: Function Contracts. It’s now available as an unstable feature with the `-Zfunction-contracts` flag. If you would like to learn more about the development and implementation details of this feature please refer to [the RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html). If you try out this new feature and want to leave feedback join the discussion in [the feature tracking issue](https://github.com/model-checking/kani/issues/2652).
+In this blogpost we discuss function contracts which are now available as an unstable feature, enabled with the `-Zfunction-contracts` flag. If you would like to learn more about the development and implementation details of this feature please refer to [the RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html). If you try out this new feature and want to leave feedback join the discussion in [the feature tracking issue](https://github.com/model-checking/kani/issues/2652).
 
 ## Introduction
 
-In today's blogpost we want to introduce you to a new concept that lets us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
+Today we want to introduce you to a new feature in Kani that let's us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
 
-The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) microvm by modularly verifying an implementation of Newton’s greatest common divisor algorithm inductively and then use that result to verify the harness.
+The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) microVM by modularly verifying an implementation of Euclid’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
 ## The Example: Firecracker’s `TokenBucket`
 
-We will explore employing a function contract when verifying the methods of `TokenBucket` in the `vmm` module of the Firecracker microvm. To keep the example concise we will use the relatively simple `TokenBucket::new` function and its verification harness. The code is slightly simplified and we also use a recursive implementation of `gcd`. Firecracker actually uses a `gcd` with a loop which would need loop contracts to verify inductively. These are not supported yet by Kani, but conceptually they operate in the same way as function contracts. You can find the original version of all harnesses and verified code [here](https://github.com/firecracker-microvm/firecracker/blob/a774e26d63981fc031b974741a39519b08a61d3b/src/vmm/src/rate_limiter/mod.rs).
+We will explore employing a function contract when verifying the methods of `TokenBucket` in the `vmm` module of the Firecracker microVM. To keep the example concise we will use the relatively simple `TokenBucket::new` function and its verification harness. The code is slightly simplified and we also use a recursive implementation of `gcd`. Firecracker actually uses a `gcd` with a loop which would need loop contracts to verify inductively. These are not supported yet by Kani, but conceptually they function the same way as function contracts. You can find the original version of all harnesses and verified code [here](https://github.com/firecracker-microvm/firecracker/blob/a774e26d63981fc031b974741a39519b08a61d3b/src/vmm/src/rate_limiter/mod.rs).
 
 Let's first look at the harness that tests `TokenBucket::new`. It is straightforward, setting up a series of non-deterministic inputs, calling the function under verification and then asserting a validity condition.
 
@@ -72,7 +72,7 @@ This is by far the costliest part of the code of `TokenBucket::new`. The rest of
 
 Since `gcd` is the most expensive part of verifying this harness it is an ideal target for using a contract to make it more efficient. In fact by replacing it with a contract we not only make this harness more efficient but also any harness that uses `gcd` directly or indirectly (e.g., by calling `TokenBucket::new`). In Firecracker, for instance, there are three more harnesses that all call `gcd` and thus benefit from modular verification.
 
-## Introducing a Function Contract
+## Introducing a Function Contract with Postconditions
 
 Function contracts are conceptually rather simple actually. They comprise a set of conditions which characterize the behavior of the function, similar to the conditions you would use in a test case. There are different types of conditions which are also called the *clauses* of the contract. The first type of clause we will introduce here is the `ensures` clause.
 
@@ -89,7 +89,7 @@ fn gcd(mut max: u64, mut min: u64) -> u64 {
 
 ```
 
-The `ensures` clause describes the relationship of the return of the function with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had been joined with `&&`. Our example could thus also have been written as
+The `ensures` clause describes the relationship of the return of the function with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani, the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not perform any *side effects*, that is: allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had ben joined with `&&`. Our example could thus also have been written as
 
 ```rust
 #[kani::ensures(max % result == 0)]
@@ -98,7 +98,7 @@ The `ensures` clause describes the relationship of the return of the function wi
 fn gcd(mut max: u64, mut min: u64) -> u64 { ... }
 ```
 
-You may wonder at this point what this is actually useful for. It turns out that for a verifier the *abstraction* of the function as described by the conditions in our `ensures` clause, is much easier to reason about than running through the many recursive calls in the actual implementation of `gcd`. You may also notice that the abstraction only approximate `gcd`. `max % result == 0` and `min % result == 0` describe *a* common divisor of `max` and `min` but not necessarily the *greatest*. However in this case this is acceptable to us when it comes to verifying the callers of `gcd`. Later we will add an additional check to ensures we generate the largest divisor.
+You may wonder at this point what this is actually useful for. It turns out that for a verifier the *abstraction* of the function as described by the conditions in our `ensures` clause, is much easier to reason about than running through the many recursive calls in the actual implementation of `gcd`. You may also notice that the abstraction only approximates `gcd`. `max % result == 0` and `min % result == 0` describe *a* common divisor of `max` and `min` but not necessarily the *greatest*. However in this case this is acceptable to us when it comes to verifying the callers of `gcd`. Later we will add an additional check to ensures we generate the largest divisor.
 
 Our goal will be to eventually use the efficient abstraction everywhere where `gcd` is called but first we must ensure that `gcd` respects these conditions. We need to *verify the contract*.
 
@@ -127,7 +127,7 @@ If we run this harness however we will discover a verification failure, because 
 
 ## Preconditions
 
-Sometimes functions, such as our `gcd` are not defined for all of their possible input (e.g. they panic on some). Function contracts let us express this using a condition that must hold at the beginning (*pre*) of a function’s execution: a *precondition*. This condition limits the inputs for which a contract will be checked during verification and it will also be used to ensure that, if we use the contract conditions for modular verification we don’t do it with any values that the function would not be defined for. We can add a precondition buy using the `requires` clause in `gcd` like so
+Sometimes functions, such as our `gcd` are not defined for all of their possible input (e.g. they panic on some). Function contracts let us express this using a condition that that the function arguments must satisfy at the beginning (*pre*) of a function’s execution: a *precondition*. This condition limits the inputs for which a contract will be checked during verification and it will also be used to ensure that, if we use the contract conditions for modular verification we don’t do it with any values that the function would not be defined for. We can add a precondition buy using the `requires` clause in `gcd` like so
 
 ```rust
 #[kani::requires(max != 0 && min != 0)]
@@ -135,7 +135,7 @@ Sometimes functions, such as our `gcd` are not defined for all of their possible
 fn gcd(mut max: u64, mut min: u64) -> u64 { ... }
 ```
 
-As with postconditions, the precondition allows any rust `bool` expressions that do not modify heap memory or perform I/O and multiple `requires` clauses act as though they were joined with `&&`.
+As with postconditions, the precondition allows any side-effect free rust expressions of type `bool`, may mention the function arguments and multiple `requires` clauses act as though they were joined with `&&`.
 
 To understand how this makes our contract verification succeed, let's integrate it into the manual harness we had written before.
 
@@ -185,7 +185,7 @@ pub fn new(size: u64, one_time_burst: u64, complete_refill_time_ms: u64) -> Opti
     let common_factor = kani::any();
     // Assume that the postconditions hold (as we know they would)
     kani::assume(
-            common_factor % size == 0
+        size % common_factor == 0
         && complete_refill_time_ns % common_factor == 0
         && common_factor != 0
     );
@@ -267,13 +267,17 @@ fn gcd_expanded_inductive_check() -> i32 {
 
 First it is helpful to think about the recursion as a sequence of individual steps that build on top of one another, like a pyramid. Each step performs the same computation, but with different inputs, because the previous step calls into it with `min` and `rest`, which differ from `max` and `min`. Now consider the first step. It is called with non-deterministic inputs that are only constrained by the precondition. Then a computation is performed to calculate `min` and `rest` that is used for the recursive call and at the end the postconditions are enforced with `assert!(max % result == 0 && ...)`. What does that mean? It means if this step passes verification we can be sure that the postconditions hold for the inputs we verified with, e.g. any combination of `max` and `min` that satisfies `max != 0 && min != 0`. Now let's consider again the recursive call. We call with `min` and `rest` which are not the same as `max` and `min`. However remember that actually what our first step verification proves not just that the postconditions hold for *a* `max` and `min`, but in fact for *any* `max` and `min`, so long as the precondition is satisfied. Therefore we can conclude that it will also hold for `gcd(min, rest)`, if `min` and `rest` satisfy the preconditions, e.g. `min != 0 && rest != 0`. And that is precisely what is enforced where the abstraction is employed with `assert!(max != 0 && min != 0)`.
 
+As a small technicality: induction is usually split into the so called "base case" and the "induction step". In our example a single run of the function actually combines both, which is the `if rest == 0` split. When `rest == 0` then we have reached the base case, otherwise we are in the induction step. Both the base case and the induction step must uphold the ponstconditions. The way that our proof is set up here already ensures that because the postcondition `assert!` gets enforced regardless of whether we took the base case or the induction step.[^return] 
+
+[^return]: The astute reader might note that this would not be the case if the body of the function we are verifying contained a `return` statement. Rest assured that the code you see here is jsut an illustration and the actual code generated for contract verification is not so easily fooled. If you want to see actual examples of how this is set up there is one in the implementation documentation of the [contracts macros](https://github.com/model-checking/kani/blob/main/library/kani_macros/src/sysroot/contracts.rs) or you can dump the generated code with the rustc flag `-Zunpretty=expanded`.
+
 To put it another way, when we recurse, we are allowed to assume that the verification passed, because the step that we are currently verifying is being checked for any possible input, including the one we are recursing with. If a problem were to occur anywhere in the recursive calls, we would see the same problem as a verification failure of the first step.
 
 Notice that using this trick, we reduced the up to 64 unrollings to just one, a substantial win. What is even better that doing this requires no input from you. Kani does this automatically. Any function with a contract is always verified inductively. Side note: this works even if the recursive call is not direct but buried somewhere in the call chain.
 
 ## A bit of Cleanup
 
-Before we close with the example, a few more details about the contract verification process. I told you earlier that Kani does most of the contract verification work for you. It injects the pre- and postconditions and sets up the inductive verification. However a small amount of manual but important labor is required by the user. Specifically Kani is not able to generate the non-deterministic inputs for verifying the contract, and so it requires the user to write a simple harness. In this case it would look like this:
+Before we close with the example, a few more details about the contract verification process. We mentioned earlier that Kani does most of the contract verification work for you. It injects the pre- and postconditions and sets up the inductive verification. However a small amount of manual but important labor is required by the user. Specifically Kani is not able to generate the non-deterministic inputs and so it requires the user to write a simple harness. In this case it would look like this:
 
 ```rust
 #[kani::proof_for_contract(gcd)]
@@ -291,7 +295,7 @@ This may be surprising to you since, in our example, we use a straightforward `k
 
 A few words about writing contract harnesses: the harness should generate completely unconstrained values, otherwise the verification will be unsound. Usually this means calling `kani::any()`. Sometimes it is not possible to create completely unconstrained values, as is the case with recursive types and array-backed types. In these cases you must use careful judgement and ensure that the value you create is large enough to exercise all possible behaviors of the function. You can think of this as covering all branches.
 
-Finally I told you we would be adding a check to ensure that our `gcd` actually produces the greatest divisor. For this we will need a separate harness and in this case we sadly cannot use any contract substitution. The reason is that, if we substitute, we get values that satisfy the postcondition, but nothing more. Since the postcondition does not ensure the result is the largest divisor possible, it won’t be.
+Finally we mentioned we would be adding a check to ensure that our `gcd` actually produces the greatest divisor. For this we will need a separate harness and in this case we sadly cannot use any contract substitution. The reason is that, if we substitute, we get values that satisfy the postcondition, but nothing more. Since the postcondition does not ensure the result is the largest divisor possible, it won’t be.
 
 ```rust
 #[kani::proof]
@@ -310,7 +314,7 @@ fn gcd_greatest_check() {
 
 ```
 
-Currently our function contracts can’t express that the result is the largest divisor, which necessitates this additional harness. In future Kani’s function contracts will be extended with *quantifiers*, which will allow the postcondition to express this property.
+Currently our function contracts can’t express that the result is the largest divisor, which necessitates this additional harness. In future Kani’s function contracts will be extended with *quantifiers*, which will allow the postcondition to express this property. For instance such a postcondition may look like this: `forall(|i| : max % i == 0 && min % i == 0 => i <= result)` which states that if any integer `i` exists that is also a divisor of `min` and `max`, then it must either be the result or smaller than it. Clearly such a condition can only be satisfied by a `result` that is the largest common divisor.
 
 ## Concluding the Example
 
