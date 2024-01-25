@@ -4,7 +4,7 @@ In this blogpost we discuss function contracts which are now available as an uns
 
 ## Introduction
 
-Today we want to introduce you to a new feature in Kani that let's us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
+Today we want to introduce you to a new feature in Kani that lets us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
 
 The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) microVM by modularly verifying an implementation of Euclid’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
@@ -89,7 +89,7 @@ fn gcd(mut max: u64, mut min: u64) -> u64 {
 
 ```
 
-The `ensures` clause describes the relationship of the return of the function with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani, the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not perform any *side effects*, that is: allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had ben joined with `&&`. Our example could thus also have been written as
+The `ensures` clause describes the relationship of the return of the function (e.g. `result`) with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani, the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not perform any *side effects*, that is: allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had been joined with `&&`. Our example could thus also have been written as
 
 ```rust
 #[kani::ensures(max % result == 0)]
@@ -127,7 +127,7 @@ If we run this harness however we will discover a verification failure, because 
 
 ## Preconditions
 
-Sometimes functions, such as our `gcd` are not defined for all of their possible input (e.g. they panic on some). Function contracts let us express this using a condition that that the function arguments must satisfy at the beginning (*pre*) of a function’s execution: a *precondition*. This condition limits the inputs for which a contract will be checked during verification and it will also be used to ensure that, if we use the contract conditions for modular verification we don’t do it with any values that the function would not be defined for. We can add a precondition buy using the `requires` clause in `gcd` like so
+Sometimes functions, such as our `gcd` are not defined for all of their possible input (e.g. they panic on some). Function contracts let us express this using a condition that that the function arguments must satisfy at the beginning (*pre*) of a function’s execution: a *precondition*. This condition limits the inputs for which a contract will be checked during verification, and it will also be used to ensure that if we use the contract conditions for modular verification, we don’t do it with any values that the function would not be defined for. We can add a precondition buy using the `requires` clause in `gcd` like so
 
 ```rust
 #[kani::requires(max != 0 && min != 0)]
@@ -318,7 +318,7 @@ Currently our function contracts can’t express that the result is the largest 
 
 ## Concluding the Example
 
-This concludes our walkthrough of function contracts and inductive verification for the firecracker example. We have seen how functions can be abstracted using the `requires` and `ensures` clause. We have seen how Kani would verify the contract holds efficiently, using inductive verification. We then saw how after verification we can use the cheap contract in other proofs that call `gcd`.
+This concludes our walkthrough of function contracts and inductive verification for the Firecracker example. We have seen how functions can be abstracted using the `requires` and `ensures` clause. We have seen how Kani would verify the contract holds efficiently, using inductive verification. We then saw how after verification we can use the cheap contract in other proofs that call `gcd`.
 
 You can use function contracts yourself with Kani since version 0.33.0. To enable the feature use `-Zfunction-contracts`. For an overview of the API, including all supported types of clauses, see our [rustdocs](https://model-checking.github.io/kani/crates/doc/kani/contracts/index.html). If you decide to try out this new feature we would very much like to hear your feedback, so join the discussion in the [feature tracking issue](https://github.com/model-checking/kani/issues/2652).
 
