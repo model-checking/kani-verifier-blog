@@ -8,6 +8,8 @@ Today we want to introduce you to a new feature in Kani that lets us verify larg
 
 The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) Virtual Machine Monitor by modularly verifying an implementation of Euclid’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
+Aside: we've actually blogged twice previously about the exiting verification work we've been doing on the Firecracker project. You can find those posts [here]({% link _posts/2023-08-31-using-kani-to-validate-security-boundaries-in-aws-firecracker.md %}) and [here]({% link _posts/2022-07-13-using-the-kani-rust-verifier-on-a-firecracker-example.md %}).
+
 ## The Example: Firecracker’s `TokenBucket`
 
 We will explore employing a function contract when verifying the methods of `TokenBucket` in the `vmm` module of the Firecracker Virtual Machine Manager. To keep the example concise we will use the relatively simple `TokenBucket::new` function and its verification harness. The code is slightly simplified and we also use a recursive implementation of `gcd`. Firecracker actually uses a `gcd` with a loop which would need loop contracts to verify inductively. These are not supported yet by Kani, but conceptually they function the same way as function contracts. You can find the original version of all harnesses and verified code [here](https://github.com/firecracker-microvm/firecracker/blob/a774e26d63981fc031b974741a39519b08a61d3b/src/vmm/src/rate_limiter/mod.rs).
@@ -65,7 +67,6 @@ fn gcd(mut max: u64, mut min: u64) -> u64 {
     let rest = max % min;
     if rest == 0 { min } else { gcd(min, rest) }
 }
-
 ```
 
 This is by far the costliest part of the code of `TokenBucket::new`. The rest of the function was a fixed set of divisions, but here we have a division and a recursive call back to `gcd`. It is not immediately obvious how busy this computation is, but in the [worst case](https://en.wikipedia.org/wiki/Euclidean_algorithm#Worst-case) the number of steps (recursions) approaches 1.5 times the number of bits needed to represent the input numbers. Meaning that for two large 64-bit numbers it can take almost 96 iterations for a single call to `gcd`. Recall that our smallest input to `TokenBucket::new` is a non-deterministic value in the range $0< x < 18446744073709$ (up to 45 non-zero bits). If a harness that uses `gcd` does not heavily constrain the input, Kani would have to unroll the recursion at least 68 times and then execute it symbolically; an expensive operation.
@@ -158,7 +159,6 @@ fn gcd_stub_check() {
         max % result == 0 && min % result == 0 && result != 0
     );
 }
-
 ```
 
 Running this in Kani succeeds, giving us confidence that now our contract properly approximates the effects of `gcd`.
@@ -273,7 +273,7 @@ As a small technicality: induction is usually split into the so called "base cas
 
 To put it another way, when we recurse, we are allowed to assume that the verification passed, because the step that we are currently verifying is being checked for any possible input, including the one we are recursing with. If a problem were to occur anywhere in the recursive calls, we would see the same problem as a verification failure of the first step.
 
-Notice that using this trick, we reduced the up to 64 unrollings to just one, a substantial win. What is even better that doing this requires no input from you. Kani does this automatically. Any function with a contract is always verified inductively. Side note: this works even if the recursive call is not direct but buried somewhere in the call chain.
+Notice that using this trick, we reduced the up to 68 unrollings to just one, a substantial win. What is even better that doing this requires no input from you. Kani does this automatically. Any function with a contract is always verified inductively. Side note: this works even if the recursive call is not direct but buried somewhere in the call chain.
 
 ## A Bit of Cleanup
 
@@ -288,10 +288,11 @@ fn gcd_stub_check() {
 
     gcd(max, min)
 }
-
 ```
 
-This may be surprising to you since, in our example, we use a straightforward `kani::any()`. Indeed for finite types like `u64` that implement `Arbitrary` Kani *could* generate this harness automatically. However for any type involving references or pointers (like `Vec`) Kani is unable to generate the harness. Because it would be confusing if sometimes the harness is generated automatically and sometimes not, we decided that for the time being a manual harness is always required. We are working on adding auto generation in the future.
+This may be surprising to you since, in our example, we use a straightforward `kani::any()`. Indeed for finite types like `u64` that implement [`Arbitrary`][Arbitrary] Kani *could* generate this harness automatically. However for any type involving references or pointers (like `Vec`) Kani is unable to generate the harness. Because it would be confusing if sometimes the harness is generated automatically and sometimes not, we decided that for the time being a manual harness is always required. We are working on adding auto generation in the future.
+
+[Arbitrary]: https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html
 
 A few words about writing contract harnesses: the harness should generate completely unconstrained values, otherwise the verification will be unsound. Usually this means calling `kani::any()`. Sometimes it is not possible to create completely unconstrained values, as is the case with recursive types and array-backed types. In these cases you must use careful judgement and ensure that the value you create is large enough to exercise all possible behaviors of the function. You can think of this as covering all branches.
 
@@ -311,7 +312,6 @@ fn gcd_greatest_check() {
     );
     assert!(!(greatest > result));
 }
-
 ```
 
 Currently our function contracts can’t express that the result is the largest divisor, which necessitates this additional harness. In future Kani’s function contracts will be extended with *quantifiers*, which will allow the postcondition to express this property. For instance such a postcondition may look like this: `forall(|i| : max % i == 0 && min % i == 0 => i <= result)` which states that if any integer `i` exists that is also a divisor of `min` and `max`, then it must either be the result or smaller than it. Clearly such a condition can only be satisfied by a `result` that is the largest common divisor.
@@ -369,16 +369,17 @@ To illustrate this, lets consider an [example from XKCD](https://xkcd.com/221/) 
 crate rand {
     pub fn random<T>() -> T
     where
-        Standard: Distribution<T>;
+        Standard: Distribution<T>
+    { /* low level system calls */ }
 }
 
-fn getRandomNumber() -> u32 {
+fn get_random_number() -> u32 {
     4  // chosen by fair dice roll
        // guaranteed to be random
 }
 
 #[kani::proof]
-#[kani::stub(rand::random, getRandomNumber)]
+#[kani::stub(rand::random, get_random_number)]
 fn my_program() {
     let v = vec![1;5];
     let i : u32 = rand::random();
@@ -387,20 +388,20 @@ fn my_program() {
 }
 ```
 
-It is rather obvious that `getRandomNumer` is not the same as `rand::random`. In the harness included in the example we can see how this leads to problems. After the stubbing is applied the random number is always going to be 4, which means the verification of the harness will succeed. However at runtime, where `rand::random` is no longer replaced a number greater than 4 can be produced and cause a panic. This type of situation where a runtime panic is not caught by verification is referred to as a *violation of soundness* or *unsoundness*.
+It is rather obvious that `get_random_number` is not the same as `rand::random`. In the harness included in the example we can see how this leads to problems. After the stubbing is applied the random number is always going to be 4, which means the verification of the harness will succeed. However at runtime, where `rand::random` is no longer replaced a number greater than 4 can be produced and cause a panic. This type of situation where a runtime panic is not caught by verification is referred to as a *violation of soundness* or *unsoundness*.
 
-When *soundness* is preserved that means that any runtime problem (such as a panic) cause a verification failure. Dually if soundness is violated then verification succeeds, but a runtime error is still possible. As you may imagine unsoundness significantly weakens the usefulness of a verifier. After all why bother verifying if we can still get issues at runtime? As a result verifiers like Kani take great care to preserve soundness. Stubbing is one of the features that ***can*** introduce unsoundness. As a result it is important to ensure that, at least for the code under verification, any stub behaves like the function it replaces. For instance it is completely sound to replace `rand::random` with a non-deterministic value with the following implementation.
+When *soundness* is preserved that means that any runtime problem (such as a panic) cause a verification failure. Dually if soundness is violated then verification succeeds, but a runtime error is still possible. As you may imagine unsoundness significantly weakens the usefulness of a verifier. After all why bother verifying if we can still get issues at runtime? As a result verifiers like Kani take great care to preserve soundness. Stubbing is one of the features that ***can*** introduce unsoundness. As a result it is important to ensure that every stub over-approixmates the function it replaces, at least for how it is used in the code under verification. For instance it is completely sound to replace `rand::random` with a non-deterministic value with the following implementation.
 
 ```rust
-fn getRandomNumber() -> u32 {
+fn get_random_number() -> u32 {
     kani::any() // actually all possible values
                 // guaranteed to be random
 }
 ```
 
-The verifier cannot execute the actual `rand::random`, because that relies on a syscall that returns a source of randomness from the machine, and so we need to replace it with something for the purposes of verification and since non-deterministic values are actually equivalent to random values this use of stubbing is useful, safe and necessary.
+The verifier cannot execute the actual `rand::random`, because that relies on a syscall that returns a source of randomness from the machine, and so we need to replace it with something for the purposes of verification. Now if you imagine the verifier modeling all possible outputs from a random number generator simultaneously, well that is the same as using a non-deterministic value. As a result this use of stubbing is useful, safe and necessary.
 
-You may wonder how we can determine whether a given situation is sound. We do this by inspecting the relationship between a function and its replacement. The replacement, by design, always approximates the behavior of the code it replaces and the question is how it does this. Conceptualize the original function as simply a black box that produces a set of possible outputs. If its replacement produces a subset of the outputs, then that is called an *under-approximation*, which causes unsoundness. We see this in our example where `getRandomNumber` produced fewer (e.g. only the integer `4`) instead of all possible outputs (all `u32` integers). Conversely if the replacement produces a superset of outputs this is called an *over-approximation* and crucially always sound!
+You may wonder how we can determine whether a given situation is sound. We do this by inspecting the relationship between a function and its replacement. The replacement, by design, always approximates the behavior of the code it replaces and the question is how it does this. Conceptualize the original function as simply a black box that produces a set of possible outputs. If its replacement produces a subset of the outputs, then that is called an *under-approximation*, which causes unsoundness. We see this in our example where `get_random_number` produced fewer (e.g. only the integer `4`) instead of all possible outputs (all `u32` integers). Conversely if the replacement produces a superset of outputs this is called an *over-approximation* and crucially always sound!
 
 Side note: the model of the black box function also extends to functions that take arguments, though in this case we have to consider separately the output sets for every combination of argument values.
 
