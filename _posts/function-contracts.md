@@ -4,7 +4,10 @@ In this blogpost we discuss function contracts which are now available as an uns
 
 ## Introduction
 
-Today we want to introduce you to a new feature in Kani that lets us verify larger programs: function contracts. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
+Today we want to introduce you to a new feature in Kani that lets us verify larger programs: function contracts [^eiffel-1][^eiffel-2]. Contracts let us safely break down the verification of a complex piece of code individually by function and efficiently compose the results, driving down the cost of verifying code with long call chains and repeated calls to the same function. This technique is called *modular verification* as the verification task is broken down into modules (in this case by function), verified independently and then recombined.
+
+[^eiffel-1]: Meyer, Bertrand: Design by Contract, in *Advances in Object-Oriented Software Engineering*, eds. D. Mandrioli and B. Meyer, Prentice Hall, 1991, pp. 1–50
+[^eiffel-2]: Meyer, Bertrand: Applying "Design by Contract", in Computer (IEEE), 25, 10, October 1992, pp. 40–51 ([online article](http://se.ethz.ch/~meyer/publications/computer/contract.pdf))
 
 The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) Virtual Machine Monitor by modularly verifying an implementation of Euclid’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
@@ -121,7 +124,6 @@ fn gcd_stub_check() {
         max % result == 0 && min % result == 0 && result != 0
     );
 }
-
 ```
 
 If we run this harness however we will discover a verification failure, because of a division by `0` in `let rest = max % min;` which brings us to the introduction of the second type of clause: `requires`.
@@ -267,7 +269,7 @@ fn gcd_expanded_inductive_check() -> i32 {
 
 First it is helpful to think about the recursion as a sequence of individual steps that build on top of one another, like a pyramid. Each step performs the same computation, but with different inputs, because the previous step calls into it with `min` and `rest`, which differ from `max` and `min`. Now consider the first step. It is called with non-deterministic inputs that are only constrained by the precondition. Then a computation is performed to calculate `min` and `rest` that is used for the recursive call and at the end the postconditions are enforced with `assert!(max % result == 0 && ...)`. What does that mean? It means if this step passes verification we can be sure that the postconditions hold for the inputs we verified with, e.g. any combination of `max` and `min` that satisfies `max != 0 && min != 0`. Now let's consider again the recursive call. We call with `min` and `rest` which are not the same as `max` and `min`. However remember that actually what our first step verification proves not just that the postconditions hold for *a* `max` and `min`, but in fact for *any* `max` and `min`, so long as the precondition is satisfied. Therefore we can conclude that it will also hold for `gcd(min, rest)`, if `min` and `rest` satisfy the preconditions, e.g. `min != 0 && rest != 0`. And that is precisely what is enforced where the abstraction is employed with `assert!(max != 0 && min != 0)`.
 
-As a small technicality: induction is usually split into the so called "base case" and the "induction step". In our example a single run of the function actually combines both, which is the `if rest == 0` split. When `rest == 0` then we have reached the base case, otherwise we are in the induction step. Both the base case and the induction step must uphold the ponstconditions. The way that our proof is set up here already ensures that because the postcondition `assert!` gets enforced regardless of whether we took the base case or the induction step.[^return] 
+As a small technicality: induction is usually split into the so called "base case" and the "induction step". In our example a single run of the function actually combines both, which is the `if rest == 0` split. When `rest == 0` then we have reached the base case, otherwise we are in the induction step. Both the base case and the induction step must uphold the ponstconditions. The way that our proof is set up here already ensures that because the postcondition `assert!` gets enforced regardless of whether we took the base case or the induction step.[^return]
 
 [^return]: The astute reader might note that this would not be the case if the body of the function we are verifying contained a `return` statement. Rest assured that the code you see here is just an illustration and the actual code generated for contract verification is not so easily fooled. If you want to see actual examples of how this is set up there is one in the implementation documentation of the [contracts macros](https://github.com/model-checking/kani/blob/main/library/kani_macros/src/sysroot/contracts.rs) or you can dump the generated code with the rustc flag `-Zunpretty=expanded`.
 
@@ -351,7 +353,6 @@ fn function_under_verification(...) {
 fn harness() {
     ... function_under_verification(...) ...
 }
-
 ```
 
 The order of `stub` and `stub_verified` does not matter. With this technique we can attach a contract to the external `gcd` without having to change the code of `function_under_verification`. Unlike other uses of stubbing this does not pose a threat to soundness because the potentially unsound `stub` effectively replaces `gcd` with itself.
