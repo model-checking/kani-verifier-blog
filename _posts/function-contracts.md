@@ -8,7 +8,7 @@ Today we want to introduce you to a new feature in Kani that lets us verify larg
 
 The best example for how function contracts improve verification time are recursive functions. With a contract a recursive function can be verified in a single step, a technique called *inductive verification*. In this post we will explore how function contracts can be used to modularize the verification of a harness in the [Firecracker](https://firecracker-microvm.github.io/) Virtual Machine Monitor by modularly verifying an implementation of Euclid’s greatest common divisor algorithm inductively and then use that result to verify the harness.
 
-Aside: we've actually blogged twice previously about the exiting verification work we've been doing on the Firecracker project. You can find those posts [here]({% link _posts/2023-08-31-using-kani-to-validate-security-boundaries-in-aws-firecracker.md %}) and [here]({% link _posts/2022-07-13-using-the-kani-rust-verifier-on-a-firecracker-example.md %}).
+Aside: we've actually blogged twice previously about the exciting verification work we've been doing on the Firecracker project. You can find those posts [here]({% link _posts/2023-08-31-using-kani-to-validate-security-boundaries-in-aws-firecracker.md %}) and [here]({% link _posts/2022-07-13-using-the-kani-rust-verifier-on-a-firecracker-example.md %}).
 
 ## The Example: Firecracker’s `TokenBucket`
 
