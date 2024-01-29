@@ -1,4 +1,7 @@
-# Function Contracts for Kani
+---
+title: Function Contracts for Kani
+layout: post
+---
 
 In this blogpost we discuss function contracts which are now available as an unstable feature, enabled with the `-Zfunction-contracts` flag. If you would like to learn more about the development and implementation details of this feature please refer to [the RFC](https://model-checking.github.io/kani/rfc/rfcs/0009-function-contracts.html). If you try out this new feature and want to leave feedback join the discussion in [the feature tracking issue](https://github.com/model-checking/kani/issues/2652).
 
@@ -90,7 +93,6 @@ fn gcd(mut max: u64, mut min: u64) -> u64 {
     let rest = max % min;
     if rest == 0 { min } else { gcd(min, rest) }
 }
-
 ```
 
 The `ensures` clause describes the relationship of the return of the function (e.g. `result`) with the arguments that the function was called with. It is often also called a *postcondition*, because it is a *condition* that must hold after (*post*) the execution of the function. With Kani, the contents of the `ensures` clause can be any Rust expression that returns `bool`. However the expression may not perform any *side effects*, that is: allocate, deallocate or modify heap memory or perform I/O. A single function may have multiple `ensures` clauses which functions as though they had been joined with `&&`. Our example could thus also have been written as
