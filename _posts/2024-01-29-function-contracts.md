@@ -118,6 +118,9 @@ fn gcd_stub_check() {
     let max = kani::any();
     let min = kani::any();
 
+    // Sadly necessary for performance right now.
+    kani::assume(max <= 255 && min <= 255);
+
     // We create any possible result
     let result = gcd(max, min);
 
@@ -127,6 +130,8 @@ fn gcd_stub_check() {
     );
 }
 ```
+
+**Caveat:** In this harness we've had to constrain the size of `min` and `max`. This is not because of contracts but because there are currently performance problems with verifying unconstrained `u64` in CBMC. Doing this makes the harness unsound, which we explain in more detail in [this section](#soundness-and-comparison-with-stubbing).
 
 If we run this harness however we will discover a verification failure, because of a division by `0` in `let rest = max % min;` which brings us to the introduction of the second type of clause: `requires`.
 
@@ -151,6 +156,9 @@ fn gcd_stub_check() {
     // non-deterministic value
     let max = kani::any();
     let min = kani::any();
+
+    // Sadly necessary for performance right now.
+    kani::assume(max <= 255 && min <= 255);
 
     // Limit the domain of inputs with precondition
     kani::assume(max != 0 && min != 0);
@@ -243,6 +251,10 @@ fn gcd_expanded_inductive_check() -> i32 {
     // Unconstrainted, non-deterministic inputs
     let max = kani::any();
     let min = kani::any();
+
+    // Sadly necessary for performance right now.
+    kani::assume(max <= 255 && min <= 255);
+
     let result = {
         // Preconditions
         kani::assume(max != 0 && min != 0);
@@ -411,3 +423,5 @@ Side note: the model of the black box function also extends to functions that ta
 Function contracts are designed such that they are always over-approximations and thus sound. This is guaranteed by the following: any value the implementation produces must pass the postcondition, but not every value that passes the postcondition must be produced by the implementation. During replacement with the contract all values that pass the postcondition are created, thus a superset of the actual outputs.
 
 In our contract design there however a remaining source of unsoundness, which is the manual harnesses for verifying contracts. This was mentioned before but as a small recap: if a manual harness restricts the input such that certain behaviors of the function and contract under verification are not covered, unsoundness arises.
+
+This happens in our example too where we sadly cannot verify `gcd` for an unconstrained `u64` input. The unsoundness arises when we stub using the contract. We may supply the stub with argument values that the function was never verified against and thus we have no assurance that the behavior of the function and the contract is going to be the same. A sound way to deal with this issue would be to use a precondition instead of `kani::assume`.
