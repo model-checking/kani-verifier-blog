@@ -187,9 +187,9 @@ Our work contributes to the robustness of Rust's standard library and highlights
 We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore Kani and contribute to its ongoing development.
 
 ## References
-(Kani Documentation)(https://model-checking.github.io/kani/)
--Rust Numeric Types
--Rust Intrinsics
+[Kani Documentation](https://model-checking.github.io/kani/)
+- Rust Numeric Types
+- Rust Intrinsics
 
 
 Link to the chanllenge: [Safety Verification: Floats and Integers](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html)
