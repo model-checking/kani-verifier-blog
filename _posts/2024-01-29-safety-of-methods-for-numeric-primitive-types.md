@@ -1,32 +1,47 @@
 ---
 title: Safety of Methods for Numeric Primitive Types
+link_to_challenge: [Safety Verification: Floats and Integers](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html)
 layout: post
 ---
 
-In this blogpost we discuss on verifying the absence of arithmetic overflow/underflow and undefined behavior in various unsafe methods provided by Rust's numeric primitive types, given that their safety preconditions are satisfied.
+In this blog post, we discuss on verifying the absence of arithmetic overflow/underflow and undefined behavior in various unsafe methods provided by Rust's numeric primitive types, given that their safety preconditions are satisfied.
 
 The post is divided into three parts:
 
-- Unsafe Integer Methods: Prove safety of methods like unchecked_add, unchecked_sub, unchecked_mul, unchecked_shl, unchecked_shr, and unchecked_neg for various integer types.
-- Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as wrapping_shl, wrapping_shr, widening_mul, and carrying_mul.
-- Float to Integer Conversion: Verify the absence of undefined behavior in to_int_unchecked for floating-point types f16 and f128.
+- Unsafe Integer Methods: Prove safety of methods like ```unchecked_add```, ```unchecked_sub```, ```unchecked_mul```, ```unchecked_shl```, ```unchecked_shr```, and ```unchecked_neg``` for various integer types.
+- Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as ```wrapping_shl```, ```wrapping_shr```, ```widening_mul```, and ```carrying_mul```.
+- Float to Integer Conversion: Verify the absence of undefined behavior in ```to_int_unchecked``` for floating-point types ```f16``` and ```f128```.FIXME: should we include f16 and f32 as well? 
 
 In addition to verifying the methods under their specified safety preconditions, we needed to ensure the absence of specific undefined behaviors:
 
-Invoking undefined behavior via compiler intrinsics.
-Reading from uninitialized memory.
-Mutating immutable bytes.
-Producing an invalid value.
-Approach and Implementation
+- Invoking undefined behavior via compiler intrinsics.<br />
+- Reading from uninitialized memory.<br />
+- Mutating immutable bytes.<br />
+- Producing an invalid value.<br />
+
+## Approach and Implementation.
 
 To tackle this challenge, we utilized Kani's verification capabilities to write proof harnesses for the unsafe methods. Our strategy involved:
+1. **Specifying Safety Preconditions**: To ensure the methods behaved correctly, we explicitly specified safety preconditions in the code. These preconditions were used to:
+   - Guide input generation.
+   - Define the boundaries for valid inputs.
+   - Avoid triggering undefined behavior in cases where the preconditions were violated.
 
-Writing Verification Harnesses: We wrote Kani proof harnesses for each method, generating inputs that satisfy the safety preconditions and invoking the methods within an unsafe block.
-Using Macros for Code Generation: To handle the large number of methods and types, we utilized Rust macros to generate the necessary harnesses efficiently.
-Handling Large Input Spaces: For methods with large input spaces (e.g., unchecked_mul for 64-bit integers), we introduced assumptions to limit the range of inputs, making the verification process tractable.
-Specifying Safety Preconditions
+2. **Writing Verification Harnesses**: We developed Kani proof harnesses for each unsafe method by:
+   - Generating inputs that satisfy the required safety preconditions.
+   - Invoking the methods within an `unsafe` block to verify their correctness and safety under the defined conditions.
+
+3. **Using Macros for Code Generation**: To efficiently handle the large number of methods and types that required verification, we utilized Rust macros. These macros automated the generation of proof harnesses, reducing redundancy and improving maintainability.
+
+4. **Handling Large Input Spaces**: For methods with large input spaces (e.g., `unchecked_mul` for 64-bit integers), we made the verification process more tractable by:
+   - Introducing assumptions to limit the range of inputs.
+   - Focusing on specific edge cases (e.g., maximum values, zero, and boundary conditions) that are most likely to cause overflow or underflow.
+
+
 
 An example of how we specified safety preconditions in the code is as follows:
+### Specifying Safety Preconditions
+
 ```rust
 #[inline(always)]
 #[cfg_attr(miri, track_caller)] // even without panics, this helps for Miri backtraces
@@ -41,16 +56,16 @@ pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
         ) => !lhs.overflowing_add(rhs).1,
     );
 
-    // SAFETY: this is guaranteed to be safe by the caller.
+    // SAFETY: The caller guarantees that the preconditions are met.
     unsafe {
         intrinsics::unchecked_add(self, rhs)
     }
 }
 ```
-Here, we used the #[requires] attribute to specify that unchecked_add requires that the addition does not overflow.
+Here, the ``` #[requires]``` attribute is used to specify that unchecked_add requires the addition to not overflow. This ensures that the function operates within defined behavior when called in an unsafe context.
 
-Generating Verification Harnesses
-We created macros to generate verification harnesses for each method and type. For example, to generate harnesses for unchecked_add:
+### Generating Verification Harnesses
+We created macros to generate verification harnesses for each method and type. For example, to generate harnesses for ```unchecked_add```:
 
 ```rust
 #[cfg(kani)]
@@ -81,11 +96,11 @@ mod verify {
 ```
 In the harness, we:
 
-Generated symbolic values for num1 and num2.
-Assumed that the addition does not overflow.
-Called unchecked_add within an unsafe block.
-Handling Large Input Spaces
-For methods like unchecked_mul, verifying over the entire input space is infeasible due to the exponential number of possibilities. We addressed this by partitioning the input space into intervals:
+- Symbolic Values: We generated symbolic values (```num1``` and ```num2```) using ```kani::any```.
+- Assumptions: Assumed that no overflow occurs using ```kani::assume```.
+- Unsafe Execution: Called ```unchecked_add``` within an unsafe block for verification.
+### Handling Large Input Spaces
+For methods like ```unchecked_mul```, verifying over the entire input space is infeasible due to the exponential number of possibilities. We addressed this by partitioning the input space into intervals:
 
 ```rust
 generate_unchecked_mul_intervals!(i32, unchecked_mul,
@@ -110,7 +125,7 @@ generate_widening_mul_intervals!(u16, u32,
 );
 ```
 
-This macro generates harnesses that verify widening_mul over specified input intervals, ensuring that it operates safely across different ranges.
+This macro generates harnesses that verify widening_mul over specified input intervals, ensuring that it operates safely across different ranges. By verifying these safe APIs, we validated that they uphold Rust's safety guarantees, even when internally relying on unsafe methods.
 
 ## Verifying Float to Integer Conversion : 
 
@@ -170,9 +185,16 @@ This challenge provided valuable insights into the process of formally verifying
 
 Our work contributes to the robustness of Rust's standard library and highlights the importance of formal verification tools in modern software development.
 
-References
+We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore Kani and contribute to its ongoing development.
+
+## References
 (Kani Documentation)[https://model-checking.github.io/kani/]
 Rust Numeric Types
 Rust Intrinsics
 
-We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore Kani and contribute to its ongoing development.
+
+
+
+
+
+
