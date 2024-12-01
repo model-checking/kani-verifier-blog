@@ -159,18 +159,19 @@ generate_to_int_unchecked_harness!(f128,
 
 ## Challenges Encountered and Lessons Learned
 **FIXME: refine and format**
-Handling Exponential Input Spaces
-Some methods, especially those involving large integer types, posed significant challenges due to the size of their input spaces. We mitigated this by:
+### Handling Exponential Input Spaces
+Certain methods, particularly those involving large integer types, presented significant challenges due to the sheer size of their input spaces. To address this, we employed the following strategies:
 
-Partitioning Input Ranges: Focusing on critical intervals where overflows are likely.
-Assumptions: Using kani::assume to limit inputs to manageable ranges.
-Ensuring Correctness of Assumptions
+- Partitioning Input Ranges: Focusing on critical intervals where overflows are likely.
+- Using Assumptions: Using `kani::assume` to limit inputs to manageable ranges. Ensuring Correctness of Assumptions
+
+### Ensuring Assumptions Reflect Safety Preconditions
 Ensuring that our assumptions accurately reflected the safety preconditions was critical. Any incorrect assumption could lead to unsound verification results.
 
-Efficient Macro Usage
+### Writing Efficient Macro
 Writing macros that generate a large number of harnesses required careful design to maintain readability and avoid code duplication.
 
-Conclusion
+### Conclusion
 This challenge provided valuable insights into the process of formally verifying unsafe methods in Rust's standard library. By leveraging Kani and carefully designing our verification harnesses, we successfully demonstrated the safety of numerous methods across various numeric primitive types.
 
 Our work contributes to the robustness of Rust's standard library and highlights the importance of formal verification tools in modern software development.
