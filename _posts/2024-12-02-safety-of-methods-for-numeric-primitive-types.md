@@ -14,7 +14,7 @@ In the past 3 months, we have rigorously analyzed unsafe methods provided by Rus
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html) is divided into three parts:
 - [Part 1] Unsafe Integer Methods: Prove safety of methods like ```unchecked_add```, ```unchecked_sub```, ```unchecked_mul```, ```unchecked_shl```, ```unchecked_shr```, and ```unchecked_neg``` for various integer types.
 - [Part 2] Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as ```wrapping_shl```, ```wrapping_shr```, ```widening_mul```, and ```carrying_mul```.
-- [Part 3] Float to Integer Conversion: Verify the absence of undefined behavior in ```to_int_unchecked``` for floating-point types ```f16``` and ```f128```. **FIXME: should we include f32 and f64 as well?**
+- [Part 3] Float to Integer Conversion: Verify the absence of undefined behavior in ```to_int_unchecked``` for floating-point types ```f32``` and ```f64```. **FIXME: should we include f16 and f128 as well?**
 
 In addition to verifying the methods under their specified safety preconditions, we needed to ensure the absence of specific undefined behaviors:
 - Invoking undefined behavior via compiler intrinsics.
@@ -132,9 +132,13 @@ This macro generates harnesses that verify `widening_mul` over specified input i
 
 ## Part 3: Verifying Float to Integer Conversion
 For the `to_int_unchecked` method, we specified preconditions to ensure the float is finite and within the target integer type's representable range:
-**FIXME: Kani Issue pending**
+
+**FIXME: Mention Kani feature requests (float_to_int_unchecked and in_range support) here**
+
+**FIXME: Mention that at the moment float_to_int_unchecked does not support f16 and f128.**
+
 ```rust
-#[requires(self.is_finite() && self >= Self::MIN && self <= Self::MAX)] // FIXME
+#[requires(self.is_finite() && kani::float::float_to_int_in_range::<Self, Int>(self))]
 pub unsafe fn to_int_unchecked<Int>(self) -> Int where Self: FloatToInt<Int> {
     // Implementation
 }
@@ -155,9 +159,9 @@ macro_rules! generate_to_int_unchecked_harness {
     }
 }
 
-generate_to_int_unchecked_harness!(f128,
-    i8, to_int_unchecked_f128_i8,
-    i16, to_int_unchecked_f128_i16,
+generate_to_int_unchecked_harness!(f32,
+    i8, to_int_unchecked_f32_i8,
+    i16, to_int_unchecked_f32_i16,
     // ... Repeat for other integer types
 );
 ```
@@ -175,7 +179,7 @@ Aligning our assumptions with the actual safety preconditions of each method was
 ### Writing Efficient Macros
 Creating macros to generate numerous harnesses required meticulous design. We focused on maintaining readability and reusability, which minimized code duplication and enhanced the scalability and maintainability of our verification process.
 
-### Conclusion
+## Conclusion
 This challenge provided valuable insights into the process of formally verifying unsafe methods in Rust's standard library. By leveraging Kani and carefully designing our verification harnesses, we successfully demonstrated the safety of numerous methods across various numeric primitive types.
 
 Our work contributes to the robustness of Rust's standard library and highlights the importance of formal verification tools in modern software development.
