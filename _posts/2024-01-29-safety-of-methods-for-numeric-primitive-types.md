@@ -10,10 +10,6 @@ Ensuring the correctness and safety of numeric operations is crucial for develop
 
 In the past 3 months, we have rigorously analyzed unsafe methods provided by Rust's numeric primitive types, such as `unchecked_add` and `unchecked_sub`, which omit runtime checks for overflow and underflow, using formal verification techniques.
 
-
-
-**FIXME: Change file name -- e.g. 2024-12-02**
-
 ## Challenge Overview
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html) is divided into three parts:
 - [Part 1] Unsafe Integer Methods: Prove safety of methods like ```unchecked_add```, ```unchecked_sub```, ```unchecked_mul```, ```unchecked_shl```, ```unchecked_shr```, and ```unchecked_neg``` for various integer types.
@@ -110,11 +106,20 @@ generate_unchecked_mul_intervals!(i32, unchecked_mul,
     unchecked_mul_i32_edge_neg, i32::MIN, i32::MIN / 2
 );
 ```
-**FIXME: A deeper explanation for "critical ranges" and "important cases".**
 By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur.
 
+The critical ranges include :
+- Small Ranges Near Zero: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like underflows.
+- Boundary Checks: Covers the maximum and minimum values `(i32::MAX, i32::MIN)`, ensuring the method handles edge cases correctly.
+- Halfway Points: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like i64 and larger, where state space `(2^64 x 2^64 = ~2^128 combinations)` becomes infeasible, narrower ranges or sampling are critical.
+
 ## Part 2: Verifying Safe APIs
-We also verified safe APIs that internally use the previously verified unsafe methods through the above workflow. For example, verifying `widening_mul` for `u16`:
+We also verified safe APIs that internally use the previously verified unsafe methods through the above workflow. 
+
+Why Verify Safe APIs?
+Safe APIs, like widening_mul, leverage internally unsafe operations (e.g., unchecked_mul). Even though marked safe, their reliability still depends on the correctness of these underlying operations. Verifying them ensures no overflow occurs in the wider type used internally. When verifying safe APIs like widening_mul, we consider the underlying unsafe functions and target specific input intervals to ensure correctness across critical ranges, balancing thoroughness with practicality.
+
+For example, verifying `widening_mul` for `u16`:
 ```rust
 generate_widening_mul_intervals!(u16, u32,
     widening_mul_u16_small, 0u16, 10u16,
@@ -158,18 +163,17 @@ generate_to_int_unchecked_harness!(f128,
 ```
 
 ## Challenges Encountered and Lessons Learned
-**FIXME: refine and format**
-### Handling Exponential Input Spaces
-Certain methods, particularly those involving large integer types, presented significant challenges due to the sheer size of their input spaces. To address this, we employed the following strategies:
 
-- Partitioning Input Ranges: Focusing on critical intervals where overflows are likely.
-- Using Assumptions: Using `kani::assume` to limit inputs to manageable ranges. Ensuring Correctness of Assumptions
+### Handling Exponential Input Spaces
+Verifying methods with large integer types was challenging due to the vast number of possible input combinations. To manage this, we implemented:
+- Partitioning Input Ranges: We targeted critical intervals where overflows are most likely, such as boundary values and mid-range points.
+- Using Assumptions: Leveraging `kani::assume`, we constrained inputs to these manageable ranges, ensuring comprehensive coverage of important cases without overwhelming the verifier.
 
 ### Ensuring Assumptions Reflect Safety Preconditions
-Ensuring that our assumptions accurately reflected the safety preconditions was critical. Any incorrect assumption could lead to unsound verification results.
+Aligning our assumptions with the actual safety preconditions of each method was essential. Any mismatch could result in unsound verification, either by overlooking edge cases or by falsely validating incorrect behaviors.
 
-### Writing Efficient Macro
-Writing macros that generate a large number of harnesses required careful design to maintain readability and avoid code duplication.
+### Writing Efficient Macros
+Creating macros to generate numerous harnesses required meticulous design. We focused on maintaining readability and reusability, which minimized code duplication and enhanced the scalability and maintainability of our verification process.
 
 ### Conclusion
 This challenge provided valuable insights into the process of formally verifying unsafe methods in Rust's standard library. By leveraging Kani and carefully designing our verification harnesses, we successfully demonstrated the safety of numerous methods across various numeric primitive types.
