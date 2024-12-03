@@ -2,7 +2,7 @@
 title: Safety of Methods for Numeric Primitive Types
 layout: post
 ---
-Authors : Rajath M Kotyal, Yen-Yun Wu, Lanfei Ma, Junfeng Jin
+Authors : [Rajath M Kotyal](https://github.com/rajathkotyal), [Yen-Yun Wu](https://github.com/Yenyun035), [Lanfei Ma](https://github.com/lanfeima), [Junfeng Jin](https://github.com/MWDZ)
 
 In this blog post, we discuss how we verified the absence of arithmetic overflow/underflow and undefined behavior in various unsafe methods provided by Rust's numeric primitive types, given that their safety preconditions are satisfied.
 
@@ -83,12 +83,11 @@ mod verify {
         ($type:ty, $method:ident, $harness_name:ident) => {
             #[kani::proof_for_contract($type::$method)]
             pub fn $harness_name() {
-                let num1: $type = kani::any::<$type>();
-                let num2: $type = kani::any::<$type>();
-
-                unsafe {
-                    num1.$method(num2);
-                }
+                let num1: $type = kani::any::<$type>(); // (1)
+                let num2: $type = kani::any::<$type>(); // (1)
+                // (2)
+                unsafe { num1.$method(num2); } // (3)
+                // (4)
             }
         }
     }
@@ -99,10 +98,10 @@ mod verify {
 }
 ```
 The harness contains several parts:
-- Symbolic values: `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
-- Assumptions: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. If there are additional assumptions not captured by function contracts, you can specify them manually as well. You can find further details in [Kani official RFC for function contracts]([url](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience)).
-- Unsafe Execution: The invocation of `unchecked_add` within an unsafe block for verification. [`unsafe`](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html) code blocks enable unsafe Rust features, such as calling unsafe functions or dereferencing raw pointers.
-- Assertions: Similar to assumptions, with `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assert()` after the unsafe function call. It checks if the function behaves as expected (e.g. returning an expected result) or if a certain safety invariants hold after function call.
+1. Symbolic values: `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
+2. Assumptions: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. If there are additional assumptions not captured by function contracts, you can specify them manually as well. You can find further details in [Kani official RFC for function contracts](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience).
+3. Unsafe Execution: The invocation of `unchecked_add` within an unsafe block for verification. [`unsafe`](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html) code blocks enable unsafe Rust features, such as calling unsafe functions or dereferencing raw pointers.
+4. Assertions: Similar to assumptions, with `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assert()` after the unsafe function call. It checks if the function behaves as expected (e.g. returning an expected result) or if a certain safety invariants hold after function call.
 
 ### 3. Handling Large Input Spaces
 For methods like `unchecked_mul`, verifying over the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals:
@@ -149,6 +148,34 @@ Safe APIs, such as `widening_mul` or `wrapping_shl`, internally leverage unsafe 
 
 ### Example: `u16::widening_mul`
 ```rust
+// Verify `widening_mul`, which internally uses `unchecked_mul`
+macro_rules! generate_widening_mul_intervals {
+    ($type:ty, $wide_type:ty, $($harness_name:ident, $min:expr, $max:expr),+) => {
+        $(
+            #[kani::proof]
+            pub fn $harness_name() {
+                let lhs: $type = kani::any::<$type>();
+                let rhs: $type = kani::any::<$type>();
+
+                // Improve performance for large integer types
+                kani::assume(lhs >= $min && lhs <= $max);
+                kani::assume(rhs >= $min && rhs <= $max);
+
+                let (result_low, result_high) = lhs.widening_mul(rhs);
+
+                // Correctness checks
+                // Compute expected result using wider type
+                let expected = (lhs as $wide_type) * (rhs as $wide_type);
+                let expected_low = expected as $type;
+                let expected_high = (expected >> <$type>::BITS) as $type;
+
+                assert_eq!(result_low, expected_low);
+                assert_eq!(result_high, expected_high);
+            }
+        )+
+    }
+}
+
 generate_widening_mul_intervals!(u16, u32,
     widening_mul_u16_small, 0u16, 10u16,
     widening_mul_u16_large, u16::MAX - 10u16, u16::MAX,
@@ -156,7 +183,7 @@ generate_widening_mul_intervals!(u16, u32,
 );
 ```
 
-This code might look familiar, as we applied a similar approach when verifying the unsafe multiplication method, `unchecked_mul`, as discussed in the [Handling Large Input Spaces](#3-handling-large-input-spaces) section. This macro generates harnesses that verify `widening_mul` over specified input intervals, ensuring that it operates safely across different ranges. By verifying these safe APIs, we validated that they uphold Rust's safety guarantees, even when internally relying on unsafe methods.
+This code might look familiar to you, as we applied a similar approach when verifying the unsafe multiplication method, `unchecked_mul`, as discussed in the [Handling Large Input Spaces](#3-handling-large-input-spaces) section. This macro generates harnesses that verify `widening_mul` over specified input intervals, ensuring that it operates safely across different ranges. In addition to the safety checks performed automatically by Kani, we incorporated explicit correctness checks on function results. While not strictly required, these checks provide an added layer of assurance by verifying function outputs against expected results.
 
 ## Part 3: Verifying Float to Integer Conversion
 For the `to_int_unchecked` method, we specified preconditions to ensure the float is finite and within the target integer type's representable range:
