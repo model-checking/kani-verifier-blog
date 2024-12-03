@@ -2,7 +2,7 @@
 title: Safety of Methods for Numeric Primitive Types
 layout: post
 ---
-Authors : [Rajath M Kotyal](https://github.com/rajathkotyal), [Yen-Yun Wu](https://github.com/Yenyun035), [Lanfei Ma](https://github.com/lanfeima), [Junfeng Jin](https://github.com/MWDZ)
+Authors: [Rajath M Kotyal](https://github.com/rajathkotyal), [Yen-Yun Wu](https://github.com/Yenyun035), [Lanfei Ma](https://github.com/lanfeima), [Junfeng Jin](https://github.com/MWDZ)
 
 In this blog post, we discuss how we verified the absence of arithmetic overflow/underflow and undefined behavior in various unsafe methods provided by Rust's numeric primitive types, given that their safety preconditions are satisfied.
 
@@ -43,7 +43,10 @@ To tackle this challenge, we utilized [Kani](https://github.com/model-checking/k
 We will walk through each part with examples from the Unsafe Integer Methods part of the challenge.
 
 ## Implementation
+
 ### 1. Specifying Safety Preconditions
+The following code demonstrates how to specify safety preconditions for an unsafe numeric method `unchecked_add` using function contracts to ensure correct behavior under the stated conditions.
+
 ```rust
 #[requires(!self.overflowing_add(rhs).1)]
 pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
@@ -69,7 +72,8 @@ The same logic applies to the postconditions (`#[ensure]`) of a function. The po
 ### 2. Generating Verification Harnesses
 Sometimes, we need to verify a method for multiple types, which often requires writing numerous harnesses. However, these harnesses usually share the same logic, which makes it inefficient and error-prone to copy and paste similar code repeatedly. This is where [**macros**](https://doc.rust-lang.org/book/ch19-06-macros.html) come in handy. As an improvement, we can define a single reusable template that dynamically generates harnesses for different types using macro, which reduces redundancy and improves maintainability.
 
-In this step, we created macros to generate verification harnesses for each method and type. For example, to generate harnesses for `unchecked_add`:
+In this next code block, we create a macros to generate verification harnesses for each method and type. it showcases the use of macros to generate reusable verification harnesses for different numeric types and methods, ensuring correctness without duplicating code.
+
 ```rust
 #[cfg(kani)]
 mod verify {
@@ -97,6 +101,7 @@ mod verify {
     // ... Repeat for other integer types (32/64/128-bit/architecture-dependent signed/unsigned integers)
 }
 ```
+
 The harness contains several parts:
 1. Symbolic values: `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
 2. Assumptions: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. If there are additional assumptions not captured by function contracts, you can specify them manually as well. You can find further details in [Kani official RFC for function contracts](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience).
@@ -104,7 +109,10 @@ The harness contains several parts:
 4. Assertions: Similar to assumptions, with `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assert()` after the unsafe function call. It checks if the function behaves as expected (e.g. returning an expected result) or if a certain safety invariants hold after function call.
 
 ### 3. Handling Large Input Spaces
-For methods like `unchecked_mul`, verifying over the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals:
+For methods like `unchecked_mul`, verifying over the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals.
+
+The following code illustrates a strategy to handle large input spaces by partitioning input ranges into manageable intervals for verification, focusing on critical edge cases.
+
 ```rust
 macro_rules! generate_unchecked_mul_intervals {
     ($type:ty, $method:ident, $($harness_name:ident, $min:expr, $max:expr),+) => {
@@ -135,6 +143,7 @@ generate_unchecked_mul_intervals!(i32, unchecked_mul,
     unchecked_mul_i32_edge_neg, i32::MIN, i32::MIN / 2         // wide range towards maximum
 );
 ```
+
 By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur. The critical ranges include :
 - Small Ranges Near Zero: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like arithmetic underflow.
 - Boundary Checks: Covers the maximum (`i32::MAX`) and minimum values (`i32::MIN`), ensuring the method handles edge cases correctly.
