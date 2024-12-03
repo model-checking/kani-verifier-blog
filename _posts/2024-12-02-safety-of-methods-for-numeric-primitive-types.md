@@ -13,20 +13,20 @@ In the past 3 months, we have rigorously analyzed unsafe methods provided by Rus
 
 ## Challenge Overview
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html) is divided into three parts:
-- [Part 1] Unsafe Integer Methods: Prove safety of methods like ```unchecked_add```, ```unchecked_sub```, ```unchecked_mul```, ```unchecked_shl```, ```unchecked_shr```, and ```unchecked_neg``` for various integer types.
-- [Part 2] Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as ```wrapping_shl```, ```wrapping_shr```, ```widening_mul```, and ```carrying_mul```.
-- [Part 3] Float to Integer Conversion: Verify the absence of undefined behavior in ```to_int_unchecked``` for floating-point types ```f32``` and ```f64```. **FIXME: should we include f16 and f128 as well?**
+1. Unsafe Integer Methods: Prove safety of methods like `unchecked_add`, `unchecked_sub`, `unchecked_mul`, `unchecked_shl`, `unchecked_shr`, and `unchecked_neg` for various integer types.
+2. Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as `wrapping_shl`, `wrapping_shr`, `widening_mul`, and `carrying_mul`.
+3. Float to Integer Conversion: Verify the absence of undefined behavior in `to_int_unchecked` for all floating-point types: `f16`, `f32`, `f64`, and `f128`.
 
-In addition to verifying the methods under their specified safety preconditions, we needed to ensure the absence of specific undefined behaviors:
+In addition to verifying the methods under their specified safety preconditions, we needed to ensure the absence of specific [undefined behaviors](https://github.com/rust-lang/reference/blob/142b2ed77d33f37a9973772bd95e6144ed9dce43/src/behavior-considered-undefined.md):
 - Invoking undefined behavior via compiler intrinsics.
 - Reading from uninitialized memory.
 - Mutating immutable bytes.
 - Producing an invalid value.
 
-## Approach and Implementation
-To tackle this challenge, we utilized Kani's verification capabilities to write proof harnesses for the unsafe methods. Our strategy involved:
+## Approach
+To tackle this challenge, we utilized [Kani](https://github.com/model-checking/kani)'s verification capabilities to write proof harnesses for the unsafe methods. Our strategy involved:
 1. **Specifying Safety Preconditions**: To ensure the methods behaved correctly, we explicitly specified safety preconditions in the code. These preconditions were used to:
-   - Guide input generation.
+   - Guide Kani input generation.
    - Define the boundaries for valid inputs.
    - Avoid triggering undefined behavior in cases where the preconditions were violated.
 
@@ -42,6 +42,7 @@ To tackle this challenge, we utilized Kani's verification capabilities to write 
 
 We will walk through each part with examples from the Unsafe Integer Methods part of the challenge.
 
+## Implementation
 ### 1. Specifying Safety Preconditions
 ```rust
 #[requires(!self.overflowing_add(rhs).1)]
@@ -61,17 +62,23 @@ pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
     }
 }
 ```
-Here, the ```#[requires]``` attribute is used to specify that `unchecked_add` requires the addition to not overflow. This ensures that the function operates within defined behavior when called in an unsafe context. While we directly leveraged the existing precondition in `unchecked_add`, not every function has an explicit precondition check. Still, we can write preconditions for unsafe functions based on the `SAFETY` section in the official documentation or the `SAFETY` comments in the source code.
+Preconditions (and postconditions) are specified using [**function contracts**](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md). Here, the `#[requires]` attribute is used to specify that `unchecked_add` requires the addition to not overflow. This ensures that the function operates within defined behavior when called in an unsafe context. While we directly leveraged the existing precondition in `unchecked_add`, not every function has an explicit precondition check. Still, we can write preconditions for unsafe functions based on the `SAFETY` section in the official documentation or the `SAFETY` comments in the source code.
 
-The same logic applies to the postconditions (`#[ensure]`) of a function.
+The same logic applies to the postconditions (`#[ensure]`) of a function. The postconditions describe the expectations that must hold true after the function is executed successfully.
 
 ### 2. Generating Verification Harnesses
-We created macros to generate verification harnesses for each method and type. For example, to generate harnesses for ```unchecked_add```:
+Sometimes, we need to verify a method for multiple types, which often requires writing numerous harnesses. However, these harnesses usually share the same logic, which makes it inefficient and error-prone to copy and paste similar code repeatedly. This is where [**macros**](https://doc.rust-lang.org/book/ch19-06-macros.html) come in handy. As an improvement, we can define a single reusable template that dynamically generates harnesses for different types using macro, which reduces redundancy and improves maintainability.
+
+In this step, we created macros to generate verification harnesses for each method and type. For example, to generate harnesses for `unchecked_add`:
 ```rust
 #[cfg(kani)]
 mod verify {
     use super::*;
 
+    // Generate harnesses for methods involving two operands
+    // `type`: Integer type
+    // `method`: Method to verify
+    // `harness_name`: A unique identifier for a harness
     macro_rules! generate_unchecked_math_harness {
         ($type:ty, $method:ident, $harness_name:ident) => {
             #[kani::proof_for_contract($type::$method)]
@@ -88,39 +95,59 @@ mod verify {
 
     generate_unchecked_math_harness!(i8, unchecked_add, unchecked_add_i8);
     generate_unchecked_math_harness!(i16, unchecked_add, unchecked_add_i16);
-    // ... Repeat for other integer types
+    // ... Repeat for other integer types (32/64/128-bit/architecture-dependent signed/unsigned integers)
 }
 ```
 The harness contains several parts:
-- Symbolic values: These values (```num1``` and ```num2```) are generated by Kani using ```kani::any```.
-- Assumptions: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. For further details, you can refer to [Kani official RFC for function contracts]([url](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience)).
-- Unsafe Execution: The invocation of ```unchecked_add``` within an unsafe block for verification.
+- Symbolic values: `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
+- Assumptions: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. If there are additional assumptions not captured by function contracts, you can specify them manually as well. You can find further details in [Kani official RFC for function contracts]([url](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience)).
+- Unsafe Execution: The invocation of `unchecked_add` within an unsafe block for verification. [`unsafe`](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html) code blocks enable unsafe Rust features, such as calling unsafe functions or dereferencing raw pointers.
+- Assertions: Similar to assumptions, with `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assert()` after the unsafe function call. It checks if the function behaves as expected (e.g. returning an expected result) or if a certain safety invariants hold after function call.
 
 ### 3. Handling Large Input Spaces
-For methods like ```unchecked_mul```, verifying over the entire input space is infeasible due to the exponential number of possibilities. We addressed this by partitioning the input space into intervals:
+For methods like `unchecked_mul`, verifying over the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals:
 ```rust
+macro_rules! generate_unchecked_mul_intervals {
+    ($type:ty, $method:ident, $($harness_name:ident, $min:expr, $max:expr),+) => {
+        $(
+            #[kani::proof_for_contract($type::$method)]
+            pub fn $harness_name() {
+                let num1: $type = kani::any::<$type>();
+                let num2: $type = kani::any::<$type>();
+
+                // Improve unchecked_mul performance for {32, 64, 128}-bit integer types
+                // by adding upper and lower limits for inputs
+                kani::assume(num1 >= $min && num1 <= $max);
+                kani::assume(num2 >= $min && num2 <= $max);
+
+                // Precondition: multiplication does not overflow
+                // Kani automatically inserts: `kani::assume(!num1.overflowing_mul(num2).1)`
+                unsafe { num1.$method(num2); }
+            }
+        )+
+    }
+}
+
 generate_unchecked_mul_intervals!(i32, unchecked_mul,
-    unchecked_mul_i32_small, -10i32, 10i32,
-    unchecked_mul_i32_large_pos, i32::MAX - 1000i32, i32::MAX,
-    unchecked_mul_i32_large_neg, i32::MIN, i32::MIN + 1000i32,
-    unchecked_mul_i32_edge_pos, i32::MAX / 2, i32::MAX,
-    unchecked_mul_i32_edge_neg, i32::MIN, i32::MIN / 2
+    unchecked_mul_i32_small, -10i32, 10i32,                    // Cases near zero
+    unchecked_mul_i32_large_pos, i32::MAX - 1000i32, i32::MAX, // maximum corner cases
+    unchecked_mul_i32_large_neg, i32::MIN, i32::MIN + 1000i32, // minimum corner cases
+    unchecked_mul_i32_edge_pos, i32::MAX / 2, i32::MAX,        // wide range towards maximum
+    unchecked_mul_i32_edge_neg, i32::MIN, i32::MIN / 2         // wide range towards maximum
 );
 ```
-By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur.
-
-The critical ranges include :
-- Small Ranges Near Zero: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like underflows.
-- Boundary Checks: Covers the maximum and minimum values `(i32::MAX, i32::MIN)`, ensuring the method handles edge cases correctly.
-- Halfway Points: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like i64 and larger, where state space `(2^64 x 2^64 = ~2^128 combinations)` becomes infeasible, narrower ranges or sampling are critical.
+By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur. The critical ranges include :
+- Small Ranges Near Zero: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like arithmetic underflow.
+- Boundary Checks: Covers the maximum (`i32::MAX`) and minimum values (`i32::MIN`), ensuring the method handles edge cases correctly.
+- Halfway Points: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like 64-bit integers (`i64`) and above, where state space `(2^64 * 2^64 = ~2^128 combinations)` becomes impractical to verify, leveraging narrower ranges or sampling are critical.
 
 ## Part 2: Verifying Safe APIs
-We also verified safe APIs that internally use the previously verified unsafe methods through the above workflow. 
+Leveraging the above workflow, we extended our efforts to ensure the safety of Rust's safe APIs.
 
-Why Verify Safe APIs?
-Safe APIs, like widening_mul, leverage internally unsafe operations (e.g., unchecked_mul). Even though marked safe, their reliability still depends on the correctness of these underlying operations. Verifying them ensures no overflow occurs in the wider type used internally. When verifying safe APIs like widening_mul, we consider the underlying unsafe functions and target specific input intervals to ensure correctness across critical ranges, balancing thoroughness with practicality.
+### Why verify safe APIs?
+Safe APIs, such as `widening_mul` or `wrapping_shl`, internally leverage unsafe operations (e.g., `unchecked_mul` or `unchecked_shl`). While marked safe, their reliability still depends on the correctness of these underlying operations. For example, verifying `widening_mul` ensures no overflow, underflow, and undefined behavior occurs in the wider type used internally. When verifying safe APIs like `widening_mul`, we consider the underlying unsafe functions and target specific input intervals to ensure correctness across critical ranges, balancing thoroughness with practicality.
 
-For example, verifying `widening_mul` for `u16`:
+### Example: `u16::widening_mul`
 ```rust
 generate_widening_mul_intervals!(u16, u32,
     widening_mul_u16_small, 0u16, 10u16,
@@ -129,7 +156,7 @@ generate_widening_mul_intervals!(u16, u32,
 );
 ```
 
-This macro generates harnesses that verify `widening_mul` over specified input intervals, ensuring that it operates safely across different ranges. By verifying these safe APIs, we validated that they uphold Rust's safety guarantees, even when internally relying on unsafe methods.
+This code might look familiar, as we applied a similar approach when verifying the unsafe multiplication method, `unchecked_mul`, as discussed in the [Handling Large Input Spaces](#3-handling-large-input-spaces) section. This macro generates harnesses that verify `widening_mul` over specified input intervals, ensuring that it operates safely across different ranges. By verifying these safe APIs, we validated that they uphold Rust's safety guarantees, even when internally relying on unsafe methods.
 
 ## Part 3: Verifying Float to Integer Conversion
 For the `to_int_unchecked` method, we specified preconditions to ensure the float is finite and within the target integer type's representable range:
