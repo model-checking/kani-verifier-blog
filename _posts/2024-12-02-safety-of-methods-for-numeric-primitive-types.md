@@ -2,6 +2,7 @@
 title: Safety of Methods for Numeric Primitive Types
 layout: post
 ---
+Authors : Rajath M Kotyal, Yen-Yun Wu, Lanfei Ma, Junfeng Jin
 
 In this blog post, we discuss how we verified the absence of arithmetic overflow/underflow and undefined behavior in various unsafe methods provided by Rust's numeric primitive types, given that their safety preconditions are satisfied.
 
