@@ -48,8 +48,8 @@ We will walk through each part with examples from the Unsafe Integer Methods par
 The following code demonstrates how to specify safety preconditions for an unsafe numeric method `unchecked_add` using [**function contracts**](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md) to ensure correct behavior under the stated conditions.
 
 ```rust
-#[requires(!self.overflowing_add(rhs).1)]
-pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
+#[requires(!self.overflowing_add(rhs).1)] // We added this precondition
+pub const unsafe fn unchecked_add(self, rhs: Self) -> Self { // existing source code
     assert_unsafe_precondition!(
         check_language_ub,
         concat!(stringify!($SelfT), "::unchecked_add cannot overflow"),
@@ -65,9 +65,9 @@ pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
     }
 }
 ```
-Here, the `#[requires]` attribute is used to specify that `unchecked_add` requires the addition to not overflow. This ensures that the function operates within defined behavior when called in an unsafe context. While we directly leveraged the existing precondition in `unchecked_add`, not every function has an explicit precondition check. Still, we can write preconditions for unsafe functions based on the `SAFETY` section in the official documentation or the `SAFETY` comments in the source code.
+Here, we added the `#[requires]` attribute above the existing source code to specify that `unchecked_add` requires the addition to not overflow. This ensures the function operates within its intended behavior when called in an unsafe context. While we directly utilized the existing precondition in `unchecked_add`, not every function includes an explicit precondition check. However, we can define preconditions for unsafe functions based on the `SAFETY` section in the official documentation or the explanatory `SAFETY` comments in the source code.
 
-The same logic applies to the postconditions (`#[ensure]`) of a function. The postconditions describe the expectations that must hold true after the function is executed successfully.
+Similarly, postconditions (`#[ensures]`) serve to define the guarantees that a function must uphold after its execution. These ensure the function output or state adheres to the intended expectations, providing an additional safeguard for correctness.
 
 ### 2. Generating Verification Harnesses
 Sometimes, we need to verify a method for multiple types, which often requires writing numerous harnesses. However, these harnesses usually share the same logic, which makes it inefficient and error-prone to copy and paste similar code repeatedly. This is where [**macros**](https://doc.rust-lang.org/book/ch19-06-macros.html) come in handy. As an improvement, we can define a single reusable template that dynamically generates harnesses for different types using macro, which reduces redundancy and improves maintainability.
@@ -102,7 +102,7 @@ mod verify {
 }
 ```
 A harness contains several parts:
-1. **Symbolic values**: `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
+1. [**Symbolic values**](https://model-checking.github.io/kani/tutorial-nondeterministic-variables.html): `num1` and `num2` are symbolic values generated using `kani::any()`. Kani employs symbolic execution to explore a wide range of input possibilities systematically.
 2. **Assumptions**: With `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assume()` before the unsafe function call. It ensures that all generated values respect the preconditions of `unchecked_add`. If there are additional assumptions not captured by function contracts, you can specify them manually as well. You can find further details in [Kani official RFC for function contracts](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md#user-experience).
 3. **Unsafe Execution**: The invocation of `unchecked_add` within an unsafe block for verification. [`unsafe`](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html) code blocks enable unsafe Rust features, such as calling unsafe functions or dereferencing raw pointers.
 4. **Assertions**: Similar to assumptions, with `#[kani::proof_for_contract]` annotation, Kani automatically inserts `kani::assert()` after the unsafe function call. It checks if the function behaves as expected (e.g. returning an expected result) or if certain safety invariants hold after function call.
@@ -149,7 +149,7 @@ generate_unchecked_mul_intervals!(i32, unchecked_mul,
 
 By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur. The critical ranges include :
 - **Small Ranges Near Zero**: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like arithmetic underflow.
-- **Boundary Checks**: Covers the maximum (`i32::MAX`) and minimum values (`i32::MIN`), ensuring the method handles edge cases correctly.
+- **Boundary Checks**: Covers the maximum (`i32::MAX`) and minimum (`i32::MIN`) values , ensuring the method handles edge cases correctly.
 - **Halfway Points**: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like 64-bit integers (`i64`) and above, where state space `(2^64 * 2^64 = ~2^128 combinations)` becomes impractical to verify, leveraging narrower ranges or sampling are critical.
 
 ## Part 2: Verifying Safe APIs
