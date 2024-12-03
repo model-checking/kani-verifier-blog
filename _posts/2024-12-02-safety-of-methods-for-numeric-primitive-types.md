@@ -202,19 +202,50 @@ generate_widening_mul_intervals!(u16, u32,
 This code might look familiar to you, as we applied a similar approach when verifying the unsafe multiplication method, `unchecked_mul`, as discussed in the [Handling Large Input Spaces](#3-handling-large-input-spaces) section. This macro generates harnesses that verify `widening_mul` over specified input intervals, ensuring that it operates safely across different ranges. In addition to the safety checks performed automatically by Kani, we incorporated explicit correctness checks on function results. While not strictly required, these checks provide an added layer of assurance by verifying function outputs against expected results.
 
 ## Part 3: Verifying Float to Integer Conversion
-After verifying safe integer APIs, our focus shifted to another critical area: verifying the to_int_unchecked method, which handles float-to-integer conversions.
+After verifying safe integer APIs, our focus shifted to another critical area: verifying the `to_int_unchecked` method, which handles float-to-integer conversions.
 
 ### First try
-**FIXME: Mention Kani feature requests (float_to_int_unchecked ) here**
+Initially, we applied the same logic as before to specify safety preconditions and write a harness generation macro. However, when we ran Kani on our harnesses, the verification failed:
+```
+...
+Failed Checks: float_to_int_unchecked is not currently supported by Kani.
+...
+Summary:
+Verification failed for - num::verify::checked_to_int_unchecked_f32
+Complete - 0 successfully verified harnesses, 1 failures, 1 total.
+```
+From the verification report, we realized that Kani did not support `float_to_int_unchecked` which is internally called by `to_int_unchecked`. We filed a [Kani feature request](https://github.com/model-checking/kani/issues/3629) immediately. Thanks to [Zyad Hassan](https://github.com/zhassan-aws), `float_to_int_unchecked` was introduced shortly [2].
 
 ### Second Try
+**FIXME: following TODO**
+Without changing any code, we ran harnesses again. While hoping things would go smoothly, another error occurred:
+```
+Check 14: <f32 as convert::num::FloatToInt>::to_int_unchecked.arithmetic_overflow.2
+- Status: FAILURE
+- Description: "float_to_int_unchecked: attempt to convert a value out of range of the target integer"
+- Location: library/core/src/convert/num.rs:30:30 in function <f32 as convert::num::FloatToInt>::to_int_unchecked
+```
+Kani reported that the preconditions were violated because the resulting integer type could not accommodate the integer representation of the input float. Upon investigation, we discovered that the `Self::MAX` and `Self::MIN` in the contract were mistakenly referring to the maximum and minimum values of the float type rather than those of the resulting integer type:
+```rust
+// Precondition
+#[requires(self.is_finite() && self >= Self::MIN && self <= Self::MAX)] // Incorrect maximum and minimum values
+pub unsafe fn to_int_unchecked<Int>(self) -> Int where Self: FloatToInt<Int> {
+    // Implementation
+}
+```
+Unfortunately, despite multiple attempts, we were unable to reference the correct maximum and minimum values under the function calling context. You can find the (full discussion)[https://github.com/model-checking/verify-rust-std/pull/134?new_mergebox=true#issuecomment-2465756450] here.
+
+In addition to this issue, we observed that there 
+
+The [full discussion](https://github.com/model-checking/verify-rust-std/discussions/187) for int to float casting imprecision problem.
+
 **FIXME: Mention casting int to float imprecision and Mention in_range support here**
 
 ### Last Try
 
 For the `to_int_unchecked` method, we specified preconditions to ensure the float is finite and within the target integer type's representable range:
 ```rust
-#[requires(self.is_finite() && kani::float::float_to_int_in_range::<Self, Int>(self))]
+#[requires(self.is_finite() && float_to_int_in_range::<Self, Int>(self))]
 pub unsafe fn to_int_unchecked<Int>(self) -> Int where Self: FloatToInt<Int> {
     // Implementation
 }
@@ -262,8 +293,10 @@ Our work contributes to the robustness of Rust's standard library and highlights
 We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore Kani and contribute to its ongoing development.
 
 ## References
-[Kani Documentation](https://model-checking.github.io/kani/)
-- Rust Numeric Types
-- Rust Intrinsics
+[1] [Kani Documentation](https://model-checking.github.io/kani/)
+* Rust Numeric Types
+* Rust Intrinsics
 
-Link to the challenge: [Safety Verification: Floats and Integers](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html)
+[2] Kani [PR#3660](https://github.com/model-checking/kani/pull/3660) and [PR#3701](https://github.com/model-checking/kani/pull/3701) to resolve [Kani Issue#3629](https://github.com/model-checking/kani/issues/3629).
+
+[3] Link to the challenge: [Safety of Methods for Numeric Primitive Types](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html)
