@@ -217,7 +217,6 @@ Complete - 0 successfully verified harnesses, 1 failures, 1 total.
 From the verification report, we realized that Kani did not support `float_to_int_unchecked` which is internally called by `to_int_unchecked`. We filed a [Kani feature request](https://github.com/model-checking/kani/issues/3629) immediately. Thanks to [Zyad Hassan](https://github.com/zhassan-aws), `float_to_int_unchecked` was introduced shortly [2].
 
 ### Second Try
-**FIXME: following TODO**
 Without changing any code, we ran harnesses again. While hoping things would go smoothly, another error occurred:
 ```
 Check 14: <f32 as convert::num::FloatToInt>::to_int_unchecked.arithmetic_overflow.2
@@ -233,11 +232,9 @@ pub unsafe fn to_int_unchecked<Int>(self) -> Int where Self: FloatToInt<Int> {
     // Implementation
 }
 ```
-Unfortunately, despite multiple attempts, we were unable to reference the correct maximum and minimum values under the function calling context. You can find the (full discussion)[https://github.com/model-checking/verify-rust-std/pull/134?new_mergebox=true#issuecomment-2465756450] here.
+Unfortunately, despite multiple attempts, we were unable to reference the correct maximum and minimum values under the function calling context. You can find the [full discussion](https://github.com/model-checking/verify-rust-std/pull/134?new_mergebox=true#issuecomment-2465756450) here.
 
-In addition to this issue, we observed that there 
-
-The [full discussion](https://github.com/model-checking/verify-rust-std/discussions/187) for int to float casting imprecision problem.
+In addition to this issue, we learned the [imprecision problem](https://github.com/model-checking/verify-rust-std/discussions/187) when casting an integer to a float type. **TODO**
 
 **FIXME: Mention casting int to float imprecision and Mention in_range support here**
 
