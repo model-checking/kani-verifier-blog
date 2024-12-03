@@ -322,6 +322,7 @@ Creating macros to generate numerous harnesses required meticulous design. We fo
 Floating-point numbers presented two significant challenges:
 1. Their inherent imprecision often caused discrepancies between the stored values and their expected representations, leading to verification failures.
 2. Not all decimal values have exact floating-point representations, meaning that the actual stored value might slightly differ from the intended one.
+
 To address these issues, we utilized the `float_to_int_in_range` method to account for these issues without compromising the rigor of our checks.
 
 ### Addressing Tool Limitations
