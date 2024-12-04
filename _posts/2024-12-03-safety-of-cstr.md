@@ -1,16 +1,31 @@
 ---
-title: Safety of CStr
+title: Safety of CStr (Tentative)
 layout: post
 ---
 
-**FIXME: overview**
-**FIXME: title should indicate that this challenge is incomplete. like Safety of CStr: Part 1 or something?**
+Authors: [Rajath M Kotyal](https://github.com/rajathkotyal), [Yen-Yun Wu](https://github.com/Yenyun035), [Lanfei Ma](https://github.com/lanfeima), [Junfeng Jin](https://github.com/MWDZ)
+
+In this blog post, we discuss how we verified that the safety invariant holds in various safe and unsafe methods provided by the Rust's `CStr` type.
 
 ## Introduction
-**FIXME**
+The `CStr` type in Rust serves as a bridge between Rust and C, enabling safe handling of null-terminated C strings. While `CStr` provides an abstraction for safe interaction, ensuring its safety invariant is vital to prevent undefined behavior, such as invalid memory access or data corruption.
+
+In this blog post, we delve into the process of formally verifying the safety of `CStr` using [AWS Kani](https://github.com/model-checking/kani). By examining its safe and unsafe methods, we ensure that they adhere to Rust's strict safety guarantees. Through this effort, we highlight the importance of robust verification for low-level abstractions in Rust's ecosystem.
 
 ## Challenge Overview
-**FIXME**
+The [`CStr` challenge](https://github.com/model-checking/verify-rust-std/blob/main/doc/src/challenges/0013-cstr.md) is divided into four parts:
+1. Safety Invariant: Define and implement the Invariant trait for `CStr` to enforce null-termination and absence of interior null bytes.
+2. Safe CStr Function Verification: Verify that safe functions like `from_bytes_with_nul` and `to_bytes` maintain the `CStr` safety invariant.
+3. Unsafe CStr Function Verification: Define function contracts for unsafe functions. Verify that unsafe functions, such as `from_bytes_with_nul_unchecked` and `strlen`, maintain the `CStr` safety invariant.
+4. Trait Implementation Verification: Verify that the trait implementations of `CloneToUninit` and `ops::Index<RangeFrom<usize>>` for `CStr` are safe.
+
+In addition to verifying the safety invariant preservation after function call, we needed to ensure the absence of specific [undefined behaviors](https://github.com/rust-lang/reference/blob/142b2ed77d33f37a9973772bd95e6144ed9dce43/src/behavior-considered-undefined.md):
+- Accessing (loading from or storing to) a place that is dangling or based on a misaligned pointer.
+- Performing a place projection that violates the requirements of in-bounds pointer arithmetic.
+- Mutating immutable bytes.
+- Accessing uninitialized memory.
+
+We will discuss Part 1, Part 2, and Part 3 in this blog post.
 
 ## Part 1: Safety Invariant
 **FIXME: add a brief intro of safety invariant here and how it helps verifying CStr**
@@ -51,7 +66,7 @@ Defined a max array size for verification to avoid performance issue. At first, 
 1. Correctness check (`let OK(c_str)` that part)
 2. Safety check (`c_str.is_safe()` part)
 
-### Run Kani on the `from_bytes_with_nul` harness
+#### Run Kani on the `from_bytes_with_nul` harness
 Maybe talk about loop unwinding here.
 1. What happens if not using `kani::unwind` -> Kani runs indefinitely (unbounded verification)
 2. Loop unwinding -> Bounded verification
@@ -78,7 +93,7 @@ fn arbitrary_cstr(slice: &[u8]) -> &CStr {
 }
 ```
 
-#### Example Usage: `to_bytes`
+#### Example Usage: `to_bytes` harness
 
 ```rust
 // pub const fn to_bytes(&self) -> &[u8]
@@ -88,7 +103,7 @@ fn check_to_bytes() {
     const MAX_SIZE: usize = 32;
     let string: [u8; MAX_SIZE] = kani::any();
     let slice = kani::slice::any_slice_of_array(&string);
-    let c_str = arbitrary_cstr(slice);
+    let c_str = arbitrary_cstr(slice); // Creation of a valid CStr
 
     let bytes = c_str.to_bytes();
     let end_idx = bytes.len();
@@ -103,11 +118,12 @@ fn check_to_bytes() {
 
 ## Part 3: whether to keep this depends on work progress
 
-## Challenges Encountered
-**FIXME**
+## Challenges Encountered & Lessons Learned
+### Input Generation
+`any_slice_of_array`
 
-## Lessons Learned
-**FIXME**
+### Unbounded Proofs
+loop unwinding
 
 ## Conclusion
 **FIXME**
