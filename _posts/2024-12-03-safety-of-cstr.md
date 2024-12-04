@@ -28,10 +28,22 @@ In addition to verifying the safety invariant preservation after function call, 
 We will discuss Part 1, Part 2, and Part 3 in this blog post.
 
 ## Part 1: Safety Invariant
-**FIXME: add a brief intro of safety invariant here and how it helps verifying CStr**
+The [safety invariant](https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#validity-and-safety-invariant) defines the conditions that safe code can assume about data to justify its operations. While unsafe code may temporarily violate this invariant, the invariant must be upheld when interacting with unknown safe code. In this challenge, the safety invariant is used to verify that the methods of the `CStr` type are sound, ensuring they safely encapsulate their underlying unsafety.
+
+The safety invariant in Rust is defined as the `Invariant` trait:
+```rust
+pub trait Invariant {
+    /// Specify the type's safety invariants 
+    fn is_safe(&self) -> bool;
+}
+```
 
 ### Implementation
-**FIXME: 1. Invariant trait impl for CStr, 2. Definition of a safe, valid CStr**
+If you're familiar with C, you likely know that a [C-string](https://en.wikipedia.org/wiki/C_string_handling#Definitions) is simply an array of bytes ending with a null terminator to mark the end of the string. Therefore, we can define a valid `CStr` as:
+1. A empty `CStr` only contains a null byte.
+2. A non-empty `CStr` should end with a null-terminator and contains no intermediate null bytes.
+
+The following code shows the implementation of the `Invariant` trait for `CStr`:
 ```rust
 #[unstable(feature = "ub_checks", issue = "none")]
 impl Invariant for &CStr {
@@ -49,6 +61,9 @@ impl Invariant for &CStr {
     }
 }
 ```
+`bytes` represents the private field of `CStr` that holds an array of bytes, including the null terminator. For any valid CStr, bytes is never empty, as it must contain at least a null byte. This refers to the `!bytes.is_empty()` check.
+
+The checks `bytes[len - 1] == 0` and `!bytes[..len-1].contains(&0)` correspond to the two aforementioned conditions: ensuring the byte sequence ends with a null terminator and contains no interior null bytes, respectively.
 
 ## Part 2: Safe CStr functions
 **FIXME: Use some examples, e.g.**
@@ -129,5 +144,5 @@ loop unwinding
 **FIXME**
 
 ## References
-[1] xx
+[1] [Safety Invariant](https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#validity-and-safety-invariant)
 [2] xx
