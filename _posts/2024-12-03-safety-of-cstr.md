@@ -131,9 +131,18 @@ fn check_to_bytes() {
 ### Epilogue: `some_CStr_function` worth talking about
 **FIXME**
 
-## Part 3: whether to keep this depends on work progress
+## Part 3: Unsafe Methods
+### `from_bytes_with_nul_uncheked`
+**FIXME**
+
+### `strlen`
+**FIXME**
+
+### `from_ptr`
+**FIXME**
 
 ## Challenges Encountered & Lessons Learned
+**FIXME**
 ### Input Generation
 `any_slice_of_array`
 
