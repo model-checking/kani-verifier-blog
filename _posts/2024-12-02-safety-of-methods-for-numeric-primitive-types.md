@@ -13,7 +13,7 @@ In the past 3 months, we have rigorously analyzed unsafe methods provided by Rus
 
 ## Challenge Overview
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0011-floats-ints.html) is divided into three parts:
-1. Unsafe Integer Methods: Prove safety of methods like `unchecked_add`, `unchecked_sub`, `unchecked_mul`, `unchecked_shl`, `unchecked_shr`, and `unchecked_neg` for various integer types.
+1. Unsafe Integer Methods: Prove the safety of methods like `unchecked_add`, `unchecked_sub`, `unchecked_mul`, `unchecked_shl`, `unchecked_shr`, and `unchecked_neg` for various integer types.
 2. Safe API Verification: Verify safe APIs that leverage the unsafe integer methods from Part 1, such as `wrapping_shl`, `wrapping_shr`, `widening_mul`, and `carrying_mul`.
 3. Float to Integer Conversion: Verify the absence of undefined behavior in `to_int_unchecked` for all floating-point types: `f16`, `f32`, `f64`, and `f128`.
 
@@ -24,7 +24,7 @@ In addition to verifying the methods under their specified safety preconditions,
 - Producing an invalid value.
 
 ## Approach
-To tackle this challenge, we utilized [Kani](https://github.com/model-checking/kani)'s verification capabilities to write proof harnesses for the unsafe methods. Our strategy involved:
+To tackle this challenge, we utilized [Kani](https://github.com/model-checking/kani)'s verification capabilities to write proof harnesses for unsafe methods. Our strategy involved:
 1. **Specifying Safety Preconditions**: To ensure the methods behaved correctly, we explicitly specified safety preconditions in the code. These preconditions were used to:
    - Guide Kani input generation.
    - Define the boundaries for valid inputs.
@@ -149,8 +149,8 @@ generate_unchecked_mul_intervals!(i32, unchecked_mul,
 
 By focusing on critical ranges, we ensured that the verification process remained tractable while still covering important cases where overflows are likely to occur. The critical ranges include :
 - **Small Ranges Near Zero**: Includes values around 0, where behavior transitions (e.g., sign changes) are more likely to expose issues like arithmetic underflow.
-- **Boundary Checks**: Covers the maximum (`i32::MAX`) and minimum (`i32::MIN`) values , ensuring the method handles edge cases correctly.
-- **Halfway Points**: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like 64-bit integers (`i64`) and above, where state space `(2^64 * 2^64 = ~2^128 combinations)` becomes impractical to verify, leveraging narrower ranges or sampling are critical.
+- **Boundary Checks**: Covers the maximum (`i32::MAX`) and minimum (`i32::MIN`) values, ensuring the method handles edge cases correctly.
+- **Halfway Points**: For instance, from `i32::MAX / 2` to `i32::MAX`. This helps validate behavior at large magnitudes. For types like 64-bit integers (`i64`) and above, where state space `(2^64 * 2^64 = ~2^128 combinations)` becomes impractical to verify, leveraging narrower ranges or sampling is critical.
 
 ## Part 2: Verifying Safe APIs
 Leveraging the above workflow, we extended our efforts to ensure the safety of Rust's safe APIs.
@@ -276,7 +276,7 @@ Consequently, we began exploring potential solutions.
 
 // Failed Attempt 3
 // Based on the idea of Attempt 2, we wrote a macro to check, but the `Int` type failed to
-// match to the target integer type, e.g. `Int` did not match to the first case when it is `i8`.
+// match to the target integer type, e.g. `Int` did not match the first case when it is `i8`.
 macro_rules! is_in_range {
     (i8, $floatType:ty, $num:ident) => { $num >= i8::MIN as $floatType && $num <= i8::MAX as $floatType };
     (i16, $floatType:ty, $num:ident) => { $num >= i16::MIN as $floatType && $num <= i16::MAX as $floatType };
