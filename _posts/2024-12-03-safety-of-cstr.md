@@ -66,90 +66,85 @@ impl Invariant for &CStr {
 The checks `bytes[len - 1] == 0` and `!bytes[..len-1].contains(&0)` correspond to the two aforementioned conditions: ensuring the byte sequence ends with a null terminator and contains no interior null bytes, respectively.
 
 ## Part 2: Safe CStr functions
-In this section, we focus on verifying the safe methods provided by CStr. Specifically, we examine `from_bytes_with_nul` and `to_bytes`, ensuring they maintain the safety invariant of CStr.We also introduce a helper function `arbitray_cstr` to aid in the verification process.
+In Part 2, we verified 9 safe `CStr` methods in [`core::ffi::c_str`](https://doc.rust-lang.org/stable/std/ffi/struct.CStr.html).
+
+In this section, we outline our approach to verifying the safe methods of CStr using `from_bytes_with_nul` as an example. We then introduce `arbitrary_cstr`, a helper function that simplifies and supports the verification process, and demonstrate its utility with the `to_bytes` method as an example.
 
 ###  Prologue: `from_bytes_with_nul`
-#### Input generation
-Initially, we entered a logical fallacy that we have to explicitly define harnesses for different test cases, e.g. xxx. However, in formal verification, we shouldn't set restrictions on inputs since our goal is to verify a function behaves as expected given ALL possible input values. Ref: https://github.com/model-checking/verify-rust-std/discussions/181#discussioncomment-11376618
-
-Defined a max array size for verification to avoid performance issue. At first, generated a fixed size array as inputs, but found that we had to verify all arrays with length <= the max array size. Therefore, leveraged `kani::any_slice_of_array` to obtain an input slice from the fixed size array. This covers every cases for `from_bytes_with_nul`.
-
-#### Verification checks
-
-1. Correctness Check: Ensures that the function returns `Ok` when given valid input and that the resulting `CStr` is as expected.
-2. Safety Check: Verifies that the resulting `CStr` satisfies the safety invariant by calling `is_safe()`.
-
-Code for verifying the safe function `from_bytes_with_nul` code:
-
-In this harness:
-
-- We generate an arbitrary byte array of size up to MAX_SIZE.
-- We obtain a slice of this array.
-- We attempt to create a CStr using from_bytes_with_nul.
-- If the creation is successful, we verify that the resulting CStr satisfies the safety invariant.
-
+We started with the harness for `from_bytes_with_nul`:
 ```rust
+// pub const fn from_bytes_until_nul(bytes: &[u8]) -> Result<&CStr, FromBytesUntilNulError>
 #[kani::proof]
 #[kani::unwind(32)]
-fn check_from_bytes_with_nul() {
-    const MAX_SIZE: usize = 32;
-    let bytes: [u8; MAX_SIZE] = kani::any();
-    let slice = kani::slice::any_slice_of_array(&bytes);
+fn check_from_bytes_until_nul() {
+    const MAX_SIZE: usize = 32; // Bound the verification size
+    let string: [u8; MAX_SIZE] = kani::any();                   // (1)
+    // Covers the case of a single null byte at the end, no null bytes, as
+    // well as intermediate null bytes
+    let slice = kani::slice::any_slice_of_array(&string);       // (1)
 
-    // Attempt to create a CStr from the slice
-    let result = CStr::from_bytes_with_nul(slice);
-    if let Ok(c_str) = result {
-        // Verify that the CStr satisfies the safety invariant
-        assert!(c_str.is_safe());
+    let result = CStr::from_bytes_until_nul(slice);             // (2)
+    if let Ok(c_str) = result {                                 // (3)
+        assert!(c_str.is_safe());                               // (4)
     }
 }
 ```
+The harness consists of several components:
+1. **Input Generation**: Use Kani to generate an input slice from a fixed-size, non-deterministic array, covering all possible inputs.
+2. **Method Invocation**: Invoke the method under verification (`from_bytes_with_nul`) on the Kani-generated input.
+3. **Result Check**: Validate the output of `from_bytes_with_nul`, which either returns an error or a reference to a CStr, depending on the input.
+4. **Property Assertions & Correctness Checks**: Confirm that the result adheres to the expected behavior and upholds the safety invariant.
 
-#### Run Kani on the `from_bytes_with_nul` harness
+#### Input Generation
+Initially, we fell into the logical fallacy of believing that we needed to explicitly define harnesses for specific test cases, such as a single null byte at the end, no null bytes, or intermediate null bytes. However, the essence of formal verification lies in avoiding restrictions on inputs, as the goal is to ensure the function behaves correctly across *all* possible inputs.
 
-In this verification harness, we use `#[kani::unwind(32)]` because we're working with a `MAX_SIZE` of `32` bytes. The unwinding bound needs to accommodate:
+Our new approach involved generating an arbitrary, fixed-size array and taking a slice of it using Kani. The [`any_slice_of_array`](https://model-checking.github.io/kani/crates/doc/kani/slice/fn.any_slice_of_array.html) function proved invaluable for this purpose, as it allows us to consider all possible slices with a length less than or equal to MAX_SIZE. Restricting the array size serves to bound the verification scope. While strings can theoretically be infinitely long, this constraint strikes a balance between thorough verification and computational feasibility. On the other hand, by capturing slices from a fixed-size array, we ensured that a single harness could cover all possible scenarios: input slices with a null byte at the end, no null bytes, or even intermediate null bytes.
 
-- The main loop that processes the bytes
-- Any additional iterations for safety checks (e.g., searching for null terminators)
+#### Verification Checks
+After method invocation, we had two checks:
+1. Correctness Checks: Ensure that the function returns `Ok` instead of an error when an valid input is given. An `Ok` result simply indicates that a `CStr` instance was successfully created; it does not inherently guarantee the safety of the `CStr`.
+2. Safety Checks: Verify that the resulting `CStr` satisfies the safety invariant by calling `is_safe()`.
 
-We sometimes need to unwind one extra time, eg. `#[kani::unwind(33)]` to verify the null terminator at position `32`. This is particularly important for functions that:
-Scan for null bytes (like `strlen`)
+#### Performance Improvement
+You may have noticed the use of `#[kani::unwind(32)]` in the harness. This was necessary since we were working with a `MAX_SIZE` of `32` bytes. The unwinding bound must account for:
+- The main loop that processes the bytes, and
+- Any additional iterations for safety checks, such as searching for null terminators.
+
+In some cases, we need to unwind one extra iteration, such as with `#[kani::unwind(33)]`, to verify the presence of a null terminator (at position 32). This is especially crucial for functions that:
+- Scan for null bytes (e.g. `strlen`)
 - Verify string boundaries
 - Check array indices up to and including the null terminator
-- The unwinding bound must be ≥ MAX_SIZE + 1 to ensure complete verification of all possible execution paths, including edge cases involving the null terminator.
 
-More about loop unwind : https://model-checking.github.io/kani/tutorial-loop-unwinding.html
+The unwinding bound must be greater and equal to `MAX_SIZE + 1` to ensure complete verification of all possible execution paths, including edge cases involving the null terminator.
 
-### Interlude
+You can find more about [loop unwinding](https://model-checking.github.io/kani/tutorial-loop-unwinding.html) in the Kani tutorial.
 
-To verify methods that operate on CStr instances, we need a way to generate arbitrary valid CStr objects. The `arbitrary_cstr` helper function serves this purpose.
+### Interlude: Helper Function `arbitray_cstr`
+In many cases, we needed to verify `CStr` methods that operate directly on a `CStr` object itself. To achieve this, we would like to generate an arbitrary `CStr` instance for verification, similar to how we generated input slices for `from_bytes_with_nul`.
 
-#### Helper function `arbitray_cstr`
-We are verifying some CStr methods calling on the CStr itself. So we want to generate an arbitrary CStr to verify those methods, just like we generated an input slice for `from_bytes_with_nul`.
-
-The `arbitray_cstr` function:
-
-- Assumes that the input slice is **non-empty** and ends with a **null terminator**.
-- Attempts to create a `CStr` using `from_bytes_until_nul`.
-- Verifies that the creation is successful and that the resulting `CStr` satisfies the safety invariant.
-
+The following code shows the implementation of `arbitray_cstr`:
 ```rust
 fn arbitrary_cstr(slice: &[u8]) -> &CStr {
 	// At a minimum, the slice has a null terminator to form a valid CStr.
-	kani::assume(slice.len() > 0 && slice[slice.len() - 1] == 0);
-	let result = CStr::from_bytes_until_nul(&slice);
+	kani::assume(slice.len() > 0 && slice[slice.len() - 1] == 0);          // (1)
+	let result = CStr::from_bytes_until_nul(&slice);                       // (2)
 	// Given the assumption, from_bytes_until_nul should never fail
-    assert!(result.is_ok());
+    assert!(result.is_ok());                                               // (3)
 	let c_str = result.unwrap();
-	assert!(c_str.is_safe());
+	assert!(c_str.is_safe());                                              // (4)
 	c_str
 }
 ```
+`arbitray_cstr` consists of four key steps:
+1. Assumption: Assumes that the input slice is **non-empty** and ends with a **null terminator**.
+2. `CStr` Creation: Attempts to construct a `CStr` using `from_bytes_until_nul`.
+3. Result Validation: Confirms that the creation is successful.
+4. Invariant Check: Validates that the resulting `CStr` adheres to the safety invariant.
 
 #### Example Usage in the `to_bytes` harness: 
+The `to_bytes` method returns the byte slice of a `CStr` without the null terminator. Our goal was to verify that `to_bytes` behaves correctly for arbitrary valid `CStr` instances.
 
-The `to_bytes` method returns the byte slice of a `CStr` without the null terminator. We need to verify that this method behaves correctly for arbitrary valid `CStr` instances.
-
+The following code block shows the `to_bytes` harness:
 ```rust
 // pub const fn to_bytes(&self) -> &[u8]
 #[kani::proof]
@@ -167,6 +162,11 @@ fn check_to_bytes() {
     assert!(c_str.is_safe());
 }
 ```
+Before invoking the method under verification, we constructed a valid, safe `CStr` using `arbitrary_cstr`. Then, we called `to_bytes` on the `CStr` instance and performed both a correctness check and a safety check. We verified that `to_bytes` accurately returns the same content as the input slice and that the `CStr` continues to uphold the safety invariant after `to_bytes` is called.
+
+With `arbitrary_cstr`, we achieved two key benefits:
+1. We eliminated code duplication and improved code maintainability by centralizing the logic for generating valid `CStr` instances.
+2. We ensured consistency and reliability in our verification process by leveraging a standardized method for constructing `CStr` objects that conform to the safety invariant.
 
 ### Epilogue: `some_CStr_function` worth talking about
 **FIXME**
@@ -174,16 +174,14 @@ fn check_to_bytes() {
 
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
 
-### Harness: `check_count_bytes`
-
+The following code is the harness for `count_bytes`.
 ```rust
 #[kani::proof]
 #[kani::unwind(32)]
 fn check_count_bytes() {
     const MAX_SIZE: usize = 32;
     let mut bytes: [u8; MAX_SIZE] = kani::any();
-    
-    // Non-deterministically generate a length within the valid range [0, MAX_SIZE]
+    // Non-deterministically generate a length within the valid range [0, MAX_SIZE)
     let mut len: usize = kani::any_where(|&x| x < MAX_SIZE);
     
     // If a null byte exists before the generated length
@@ -198,6 +196,7 @@ fn check_count_bytes() {
     let c_str = CStr::from_bytes_until_nul(&bytes).unwrap();
     // Verify that count_bytes matches the adjusted length
     assert_eq!(c_str.count_bytes(), len);
+    assert!(c_str.is_safe());
 }
 ```
 
@@ -206,7 +205,7 @@ To validate the design and correctness of the `count_bytes` method, we use the f
 The count_bytes method leverages Rust's memory-safe guarantees and the internal structure of CStr to provide efficient length computation.
 
 ## Part 3: Unsafe Methods
-
+**FIXME: edit**
 In this section, we focus on verifying the unsafe methods provided by CStr. Specifically, we examine `from_bytes_with_nul_unchecked`, `strlen`, and `from_ptr`, ensuring they maintain the safety invariant when used correctly.
 
 ### `from_bytes_with_nul_unchecked`
@@ -270,29 +269,25 @@ fn check_from_bytes_with_nul_unchecked() {
 ## Challenges Encountered & Lessons Learned
 
 ### Input Generation
-
 One of the main challenges was generating appropriate inputs for verification. Initially, we considered generating specific test cases, but formal verification requires exploring all possible inputs within the specified bounds.
 
 We utilized `kani::any_slice_of_array `and `kani::any_where` to generate arbitrary inputs while enforcing preconditions. This approach allowed us to cover a wide range of input scenarios, ensuring thorough verification.
 
 ### Unbounded Proofs and Loop Unwinding
-
 Another challenge was dealing with unbounded loops in functions like strlen. Without setting an unwinding bound, Kani would run indefinitely. We addressed this by using `#[kani::unwind(N)]` to specify loop bounds, enabling Kani to perform bounded verification effectively.
 
 ### Verifying Unsafe Code
-
 Verifying unsafe functions required precise specification of preconditions and postconditions. We needed to ensure that our contracts accurately captured the requirements for safe usage. This involved careful analysis of pointer accessibility, null termination, and memory safety.
 
 ### Balancing Verification Depth and Performance
-
 Setting appropriate unwinding bounds was crucial to balance the depth of verification and performance. Larger bounds increase verification time, so we needed to choose values that provided sufficient coverage without excessive resource consumption.
 
 ## Conclusion
-
 Through this project, we successfully verified that the safe and unsafe methods of Rust's CStr type uphold the safety invariant and prevent undefined behavior when used correctly. By leveraging formal verification with Kani, we ensured that these fundamental abstractions in Rust's standard library are reliable and robust.
 
 This effort highlights the importance of formal methods in verifying low-level code, especially when dealing with unsafe operations and foreign function interfaces. By providing precise contracts and thorough verification harnesses, we contribute to Rust's mission of safety and reliability.
 
 ## References
 [1] [Safety Invariant](https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#validity-and-safety-invariant)
-[2] [Challenge 13](https://github.com/model-checking/verify-rust-std/issues/150) 
+
+[2] [Challenge 13: Safety of CStr](https://github.com/model-checking/verify-rust-std/issues/150) 
