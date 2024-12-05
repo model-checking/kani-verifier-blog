@@ -169,7 +169,8 @@ With `arbitrary_cstr`, we achieved two key benefits:
 2. We ensured consistency and reliability in our verification process by leveraging a standardized method for constructing `CStr` objects that conform to the safety invariant.
 
 ### Epilogue: `some_CStr_function` worth talking about
-**FIXME**
+**FIXME: can add `as_ptr`**
+
 ### Example: `count_bytes`
 
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
@@ -206,6 +207,7 @@ The count_bytes method leverages Rust's memory-safe guarantees and the internal 
 
 ## Part 3: Unsafe Methods
 **FIXME: edit**
+
 In this section, we focus on verifying the unsafe methods provided by CStr. Specifically, we examine `from_bytes_with_nul_unchecked`, `strlen`, and `from_ptr`, ensuring they maintain the safety invariant when used correctly.
 
 ### `from_bytes_with_nul_unchecked`
