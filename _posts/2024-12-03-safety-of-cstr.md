@@ -130,6 +130,40 @@ fn check_to_bytes() {
 
 ### Epilogue: `some_CStr_function` worth talking about
 **FIXME**
+### Example: `count_bytes`
+
+The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
+
+### Harness: `check_count_bytes`
+
+```rust
+#[kani::proof]
+#[kani::unwind(32)]
+fn check_count_bytes() {
+    const MAX_SIZE: usize = 32;
+    let mut bytes: [u8; MAX_SIZE] = kani::any();
+    
+    // Non-deterministically generate a length within the valid range [0, MAX_SIZE]
+    let mut len: usize = kani::any_where(|&x| x < MAX_SIZE);
+    
+    // If a null byte exists before the generated length
+    // adjust len to its position
+    if let Some(pos) = bytes[..len].iter().position(|&x| x == 0) {
+        len = pos;
+    } else {
+        // If no null byte, insert one at the chosen length
+        bytes[len] = 0;
+    }
+
+    let c_str = CStr::from_bytes_until_nul(&bytes).unwrap();
+    // Verify that count_bytes matches the adjusted length
+    assert_eq!(c_str.count_bytes(), len);
+}
+```
+
+To validate the design and correctness of the `count_bytes` method, we use the following harness. It ensures that the method works as expected for all valid inputs, handling cases where the null byte is already present or needs to be inserted.
+
+The count_bytes method leverages Rust's memory-safe guarantees and the internal structure of CStr to provide efficient length computation.
 
 ## Part 3: Unsafe Methods
 ### `from_bytes_with_nul_uncheked`
