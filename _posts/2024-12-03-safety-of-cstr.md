@@ -136,10 +136,10 @@ fn arbitrary_cstr(slice: &[u8]) -> &CStr {
 }
 ```
 `arbitray_cstr` consists of four key steps:
-1. Assumption: Assumes that the input slice is non-empty and ends with a null terminator. This is a small optimization which guarantees that the input slice contains at least a null terminator.
-2. `CStr` Creation: Attempts to construct a `CStr` using `from_bytes_until_nul`.
-3. Result Validation: Confirms that the creation is successful.
-4. Invariant Check: Validates that the resulting `CStr` adheres to the safety invariant.
+1. **Assumption**: Assumes that the input slice is non-empty and ends with a null terminator. This is a small optimization which guarantees that the input slice contains at least a null terminator.
+2. **`CStr` Creation**: Attempts to construct a `CStr` using `from_bytes_until_nul`.
+3. **Result Validation**: Confirms that the creation is successful.
+4. **Invariant Check**: Validates that the resulting `CStr` adheres to the safety invariant.
 
 #### Example Usage in the `to_bytes` harness: 
 The `to_bytes` method returns the byte slice of a `CStr` without the null terminator. Our goal was to verify that `to_bytes` behaves correctly for arbitrary valid `CStr` instances.
@@ -169,9 +169,11 @@ With `arbitrary_cstr`, we achieved two key benefits:
 2. We ensured consistency and reliability in our verification process by leveraging a standardized method for constructing `CStr` objects that conform to the safety invariant.
 
 ### Epilogue: `count_bytes` & `as_ptr`
-**FIXME: add a transition**
+In the previous sections, we detailed our verification approach. In this section, we will highlight some of the harnesses we wrote, focusing on those we found particularly interesting.
 
 ### Example: `count_bytes`
+**FIXME: improve explanation -- explain verification logic more i.e. how you did w/o arbitrary_cstr**
+
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
 
 To validate the design and correctness of the `count_bytes` method, we use the following harness. It ensures that the method works as expected for all valid inputs, handling cases where the null byte is already present or needs to be inserted.
@@ -239,7 +241,7 @@ We followed a similar workflow as before; however, before writing the harnesses,
 ### `from_bytes_with_nul_unchecked`
 Similar to `from_bytes_with_nul`, the `from_bytes_with_nul_unchecked` function creates a `CStr` from a byte slice. However, unlike its checked counterpart, `from_bytes_with_nul_unchecked` performs no validation. As a result, it is marked unsafe because improper usage can lead to undefined behavior.
 
-#### [Function Contract](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md)
+#### Function Contract
 We defined the preconditions and postconditions of `from_bytes_with_nul_unchecked` according to its purpose and the safety requirements from its function documentation:
 ```rust
 /// # Safety
@@ -296,9 +298,17 @@ fn check_from_bytes_with_nul_unchecked() {
 
 ### `strlen`
 **FIXME**
+#### Function Contract
+#### Preconditions (`#[requires]`)
+#### Postconditions (`#[ensures]`)
+#### Verification Harness
 
 ### `from_ptr`
 **FIXME**
+#### Function Contract
+#### Preconditions (`#[requires]`)
+#### Postconditions (`#[ensures]`)
+#### Verification Harness
 
 ## Challenges Encountered & Lessons Learned
 Lastly, we summarized the main challenges we encountered throughout the course and our reflections.
