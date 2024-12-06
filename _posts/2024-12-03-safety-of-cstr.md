@@ -172,7 +172,6 @@ With `arbitrary_cstr`, we achieved two key benefits:
 In the previous sections, we detailed our verification approach. In this section, we will highlight some of the harnesses we wrote, focusing on those we found particularly interesting.
 
 ### Example: `count_bytes`
-**FIXME: improve explanation -- explain verification logic more i.e. how you did w/o arbitrary_cstr**
 
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
 
@@ -201,6 +200,13 @@ fn check_count_bytes() {
     assert!(c_str.is_safe());
 }
 ```
+
+In the verification logic, it is essential to explicitly handle two cases:
+
+- A null terminator already exists in the array: The position of the null byte must be identified, and len must be dynamically adjusted to match its location.
+- No null terminator exists in the array: A null byte must be explicitly inserted at the designated position to ensure the array forms a valid C-style string.
+
+The `arbitrary_cstr` function abstracts away these details, making it unsuitable for verifying functions like `count_bytes`, which need to handle such dynamic conditions explicitly.
 
 **FIXME: add `as_ptr`**
 
