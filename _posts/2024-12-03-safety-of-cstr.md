@@ -172,7 +172,6 @@ With `arbitrary_cstr`, we achieved two key benefits:
 In the previous sections, we detailed our verification approach. In this section, we will highlight some of the harnesses we wrote, focusing on those we found particularly interesting.
 
 ### Example: `count_bytes`
-
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
 
 To validate the design and correctness of the `count_bytes` method, we use the following harness. It ensures that the method works as expected for all valid inputs, handling cases where the null byte is already present or needs to be inserted.
@@ -186,7 +185,7 @@ fn check_count_bytes() {
     let mut len: usize = kani::any_where(|&x| x < MAX_SIZE);
     
     // If a null byte exists before the generated length
-    // adjust len to its position
+    // adjust `len` to its position
     if let Some(pos) = bytes[..len].iter().position(|&x| x == 0) {
         len = pos;
     } else {
@@ -200,13 +199,28 @@ fn check_count_bytes() {
     assert!(c_str.is_safe());
 }
 ```
+This harness was created before the introduction of `arbitrary_cstr`. While it did not utilize `arbitrary_cstr`, the verification logic was similar: generate an input slice, invoke count_bytes, optionally validate the result, and verify the safety invariant.
 
-In the verification logic, it is essential to explicitly handle two cases:
+The harness explicitly handled two scenarios:
+- A null byte before the null terminator in the input slice: The position of the null byte was identified, and `len` was dynamically adjusted to reflect its location.
+- No null terminator in the input slice: A null byte was explicitly inserted at a designated position to ensure the slice could form a valid C-style string.
 
-- A null terminator already exists in the array: The position of the null byte must be identified, and len must be dynamically adjusted to match its location.
-- No null terminator exists in the array: A null byte must be explicitly inserted at the designated position to ensure the array forms a valid C-style string.
-
-The `arbitrary_cstr` function abstracts away these details, making it unsuitable for verifying functions like `count_bytes`, which need to handle such dynamic conditions explicitly.
+We can further enhance the harness by utilizing `arbitrary_cstr` to abstract away the input generation, as demonstrated below:
+```rust
+#[kani::proof]
+#[kani::unwind(32)]
+fn check_count_bytes() {
+    const MAX_SIZE: usize = 32;
+    let string: [u8; MAX_SIZE] = kani::any();
+    let slice = kani::slice::any_slice_of_array(&string);
+    let c_str = arbitrary_cstr(slice);
+    // Retrieve the length of the stored bytes that actually get stored.
+    let bytes = c_str.to_bytes();
+    let len = bytes.len();
+    assert_eq!(c_str.count_bytes(), len);
+    assert!(c_str.is_safe());
+}
+```
 
 **FIXME: add `as_ptr`**
 
