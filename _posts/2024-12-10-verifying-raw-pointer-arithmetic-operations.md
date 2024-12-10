@@ -1,4 +1,4 @@
---
+---
 title: Verifying Raw Pointer Arithmetic Operations
 layout: post
 ---
