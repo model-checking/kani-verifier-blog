@@ -87,3 +87,96 @@ Error: the trait `Arbitrary` is not implemented for `*mut T`
 **Solution**:
 Currently, there is no clean workaround for this issue. The temporary solution is to avoid using Kani’s stubbing mechanism for functions with pointer return types. We raised this issue with the Kani development team, and they are tracking it for future support.
 **Related Issue**: [Kani Issue #3732](https://github.com/model-checking/kani/issues/3732)
+
+## Implementation
+
+### 1. Placeholder
+
+
+### 2. Pointee Types
+
+In our implementation, we cover a variety of pointee types to ensure robust verification:
+
+- **Integer Types**: Includes `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, and others. These fundamental types are frequently used in pointer arithmetic.
+   - Integer types are common in pointer arithmetic and cover both signed and unsigned values.
+
+   - **Example**: Verification for `offset` on `i32`:
+    ```rust
+    generate_arithmetic_harnesses!(
+        i32,
+        check_const_add_i32,
+        check_const_sub_i32,
+        check_const_offset_i32
+    );
+    ```
+    
+- **Slices**: Slices allow pointer operations over contiguous memory blocks.
+    - **Example**: Verification for `offset` on a slice of `i32`:
+    ```rust
+    generate_slice_harnesses!(
+        i32,
+        check_const_add_slice_i32,
+        check_const_sub_slice_i32,
+        check_const_offset_slice_i32
+    );
+    ```
+- **Dynamic Traits (`dyn Trait`)**: Verification extends to trait objects, providing support for dynamic dispatch.
+    - **Example**: Verification for `byte_offset` on `dyn TestTrait`:
+    ```rust
+    gen_const_byte_arith_harness_for_dyn!(byte_offset, check_const_byte_offset_dyn);
+    ```
+
+By including these types, we address diverse use cases and scenarios in Rust's ecosystem.
+
+
+#### Macros for Automation
+
+
+### 3. Usage Scenarios
+
+---
+
+#### **`String::remove`**: Removing characters from a `String`
+
+The `String::remove` method removes a character at a specified index in a string and shifts the remaining characters to fill the gap. The Kani proof verifies:
+- The string's length decreases by one after the removal.
+- The removed character is a valid ASCII character.
+- The removed character matches the character at the specified index in the original string.
+
+---
+
+#### **`Vec::swap_remove`**: Efficiently removing and replacing elements in a vector
+
+The `Vec::swap_remove` method removes an element at a specified index and replaces it with the last element in the vector. The Kani proof ensures:
+- The vector's length decreases by one after the operation.
+- The removed element matches the original element at the specified index.
+- If the removed index is not the last, the index now contains the last element of the original vector.
+- All other elements remain unaffected.
+
+---
+
+#### **`Option::as_slice`**: Converting an `Option` into a slice
+
+The `Option::as_slice` method converts an `Option` containing a collection into a slice. The proof would validate:
+- The result is a valid slice if the `Option` contains a value.
+- The length of the resulting slice matches the length of the contained collection.
+
+---
+
+#### **`VecDeque::swap`**: Swapping elements in a double-ended queue
+
+The `VecDeque::swap` method swaps two elements at specified indices in a `VecDeque`. The Kani proof verifies:
+- The elements at the specified indices are swapped correctly.
+- All other elements in the `VecDeque` remain unchanged.
+
+---
+
+#### Summary of Usage Proofs
+
+These proofs ensure the following:
+- For `String::remove`, the operation adheres to ASCII validity, proper index bounds, and string length constraints.
+- For `Vec::swap_remove`, the vector maintains integrity during element removals and replacements.
+- For `Option::as_slice`, the resulting slice is valid and matches the contained data.
+- For `VecDeque::swap`, swapped and unaffected elements are verified for correctness.
+
+These examples demonstrate how Kani ensures safety and correctness in common Rust operations.
