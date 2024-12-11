@@ -382,7 +382,7 @@ The `strlen` function computes the length of a null-terminated C string by scann
 
 - It operates directly on raw pointers with no built-in checks.
 - If the input pointer does not point to a valid null-terminated string within `isize::MAX` bytes, undefined behavior can occur.
-- To ensure correct usage, we define the following contract for strlen:
+- To ensure correct usage, we define the following contract for `strlen`:
 
 ```rust
 #[requires(is_null_terminated(ptr))]
