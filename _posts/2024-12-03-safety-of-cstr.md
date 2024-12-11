@@ -169,7 +169,7 @@ With `arbitrary_cstr`, we achieved two key benefits:
 2. We ensured consistency and reliability in our verification process by leveraging a standardized method for constructing `CStr` objects that conform to the safety invariant.
 
 ### Epilogue: `count_bytes` & `as_ptr`
-In the previous sections, we detailed our verification approach. In this section, we will highlight some of the harnesses we wrote, focusing on those we found particularly interesting.
+In the previous sections, we detailed our verification approach. Now, let's highlight a few other harnesses that we found interesting or challenging, focusing on `count_bytes` and `as_ptr`.
 
 ### Example: `count_bytes`
 The `count_bytes` method is designed to efficiently return the length of a C-style string, excluding the null terminator. It is implemented as a constant-time operation based on the string's internal representation, which stores the length and null terminator.
@@ -221,8 +221,11 @@ fn check_count_bytes() {
     assert!(c_str.is_safe());
 }
 ```
+By leveraging `arbitrary_cstr`, we avoided manual null insertion and verification. Instead, we relied on `arbitrary_cstr` to produce a valid `CStr` that inherently satisfies the safety invariant. We then directly compared `count_bytes()` with the length of `c_str.to_bytes()` to confirm correctness.
 
-**FIXME: add `as_ptr`**
+### Example : `as_ptr`
+
+The `as_ptr` method returns a raw pointer to the underlying C string. Although `as_ptr` is safe to call, dereferencing the returned pointer is inherently unsafe. We must verify that `as_ptr` does not violate the safety invariant and that it points to a valid memory region containing the C string plus its null terminator.
 
 ```rust
 // pub const fn as_ptr(&self) -> *const c_char
@@ -252,6 +255,13 @@ fn check_as_ptr() {
     assert!(c_str.is_safe());
 }
 ```
+
+Here, we confirm:
+
+- `as_ptr()` returns a pointer that can be safely read for `len` bytes.
+- Each byte read from the raw pointer matches the corresponding byte in `bytes_with_nul`.
+- The CStr remains safe.
+
 
 ## Part 3: Unsafe Methods
 In Part 3, we focused on verifying the unsafe methods provided by CStr. Specifically, we examined `from_bytes_with_nul_unchecked`, `strlen`, and `from_ptr`, ensuring they maintain the safety invariant when used correctly.
@@ -310,25 +320,129 @@ fn check_from_bytes_with_nul_unchecked() {
     assert_eq!(bytes, &slice[..len]);
 }
 ```
-**FIXME: edit**
+
 - We generate a byte vector of arbitrary length up to `max_size`.
 - The vector is filled with non-`zero` bytes, ensuring no interior null bytes.
 - The last byte is set to zero to serve as the null terminator.
 - We call `from_bytes_with_nul_unchecked` within an unsafe block and verify that the resulting `CStr` satisfies the safety invariant.
 
 ### `strlen`
-**FIXME**
 #### Function Contract
+The strlen function computes the length of a null-terminated C string by scanning memory until it finds a null terminator (0 byte). It is defined as unsafe because:
+
+- It operates directly on raw pointers with no built-in checks.
+- If ptr does not point to a valid null-terminated string within isize::MAX bytes, undefined behavior can occur.
+- To ensure correct usage, we define the following contract for strlen:
+
+```rust
+#[requires(is_null_terminated(ptr))]
+#[ensures(|&result| result < isize::MAX as usize && unsafe { *ptr.add(result) } == 0)]
+const unsafe fn strlen(ptr: *const c_char) -> usize {
+    // Implementation
+}
+```
+
 #### Preconditions (`#[requires]`)
+- `ptr` must point to a valid null-terminated C string. We rely on a helper function `is_null_terminated` to confirm that there's a null terminator within `isize::MAX` bytes of `ptr`.
+
+```rust 
+#[cfg(kani)]
+#[requires(!ptr.is_null())]
+fn is_null_terminated(ptr: *const c_char) -> bool {
+    let mut next = ptr;
+    let mut found_null = false;
+    while can_dereference(next) {
+        if unsafe { *next == 0 } {
+            found_null = true;
+            break;
+        }
+        next = next.wrapping_add(1);
+    }
+    if (next.addr() - ptr.addr()) >= isize::MAX as usize {
+        return false;
+    }
+    found_null
+}
+```
 #### Postconditions (`#[ensures]`)
+- result is strictly less than isize::MAX, ensuring the length does not exceed architectural limits.
+- *ptr.add(result) is 0, confirming that result correctly identifies the position of the null terminator.
+- By implication, there are no null bytes before result, since strlen returns the index of the first null terminator.
+
 #### Verification Harness
+```rust
+#[kani::proof_for_contract(super::strlen)]
+#[kani::unwind(33)]
+fn check_strlen_contract() {
+    const MAX_SIZE: usize = 32;
+    let mut string: [u8; MAX_SIZE] = kani::any();
+    let ptr = string.as_ptr() as *const c_char;
+
+    // Since we rely on the precondition that `ptr` must point to a null-terminated string,
+    // Kani will assume `is_null_terminated(ptr)` holds. 
+    // The harness does not insert explicit null bytes here; it checks whether
+    // under the given assumptions, `strlen` maintains its contract.
+    unsafe { super::strlen(ptr); }
+}
+```
+In this harness:
+
+- We generate an arbitrary array and treat it as the C string buffer.
+- Kani, guided by the preconditions, will assume `is_null_terminated(ptr)` is satisfied for this proof harness. If not, no valid execution paths will satisfy the contract.
+- By calling `strlen` under these assumptions, we verify that if the input is a proper null-terminated C string, `strlen` will return a correct length and maintain the specified postconditions.
+
+This demonstration ensures that if an external caller meets the preconditions (e.g., ensuring `ptr` points to a null-terminated C string), `strlen` will not introduce undefined behavior.
 
 ### `from_ptr`
-**FIXME**
 #### Function Contract
+The from_ptr function constructs a CStr from a raw pointer. It is unsafe because:
+
+- The pointer must not be null.
+- The C string must be null-terminated.
+- The memory it points to must be valid and must not extend beyond `isize::MAX` bytes.
+
+We specify the following contract to capture these requirements:
+
+```rust
+#[requires(!ptr.is_null() && is_null_terminated(ptr))]
+#[ensures(|result: &&CStr| result.is_safe())]
+pub const unsafe fn from_ptr<'a>(ptr: *const c_char) -> &'a CStr {
+    // Implementation
+}
+```
+
 #### Preconditions (`#[requires]`)
+
+- ptr must not be null.
+- ptr must point to a valid null-terminated C string, as guaranteed by is_null_terminated(ptr).
+
 #### Postconditions (`#[ensures]`)
+
+- The returned &CStr reference satisfies the safety invariant, ensuring it is a valid, null-terminated C string with no interior null bytes.
+
 #### Verification Harness
+
+```rust
+#[kani::proof_for_contract(CStr::from_ptr)]
+#[kani::unwind(33)]
+fn check_from_ptr_contract() {
+    const MAX_SIZE: usize = 32;
+    let string: [u8; MAX_SIZE] = kani::any();
+    let ptr = string.as_ptr() as *const c_char;
+
+    // Given the precondition is_null_terminated(ptr), Kani will attempt to verify
+    // that from_ptr is safe under these assumptions. 
+    unsafe { CStr::from_ptr(ptr); }
+}
+```
+
+In this Harness :
+
+- We generate an arbitrary array and treat it as a potential C string.
+- By relying on the precondition is_null_terminated(ptr), Kani explores paths where ptr is a valid null-terminated string.
+- Under these conditions, from_ptr must produce a CStr that satisfies the safety invariant.
+
+This ensures that as long as users provide a null-terminated string in a valid memory region, from_ptr will yield a safe CStr.
 
 ## Challenges Encountered & Lessons Learned
 Lastly, we summarized the main challenges we encountered throughout the course and our reflections.
