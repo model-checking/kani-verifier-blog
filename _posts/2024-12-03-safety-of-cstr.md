@@ -1,5 +1,5 @@
 ---
-title: Safety of CStr (Tentative)
+title: Verifying Safety of Rust's CStr
 layout: post
 ---
 Authors: [Rajath M Kotyal](https://github.com/rajathkotyal), [Yen-Yun Wu](https://github.com/Yenyun035), [Lanfei Ma](https://github.com/lanfeima), [Junfeng Jin](https://github.com/MWDZ)
@@ -10,7 +10,7 @@ In this blog post, we discuss how we verified that the safety invariant holds in
 
 The `CStr` type in Rust serves as a bridge between Rust and C, enabling safe handling of null-terminated C strings. While `CStr` provides an abstraction for safe interaction, ensuring its safety invariant is vital to prevent undefined behavior, such as invalid memory access or data corruption.
 
-In this blog post, we delve into the process of formally verifying the safety of `CStr` using [AWS Kani](https://github.com/model-checking/kani). By examining its safe and unsafe methods, we ensure that they adhere to Rust's strict safety guarantees. Through this effort, we highlight the importance of robust verification for low-level abstractions in Rust's ecosystem.
+In this blog post, we delve into the process of formally verifying the safety of `CStr` using [Kani](https://github.com/model-checking/kani). By examining its safe and unsafe methods, we ensure that they adhere to Rust's strict safety guarantees. Through this effort, we highlight the importance of robust verification for low-level abstractions in Rust's ecosystem.
 
 ## Challenge Overview
 
@@ -27,8 +27,6 @@ In addition to verifying the safety invariant preservation after function call, 
 - Performing a place projection that violates the requirements of in-bounds pointer arithmetic.
 - Mutating immutable bytes.
 - Accessing uninitialized memory.
-
-We will discuss Part 1, Part 2, and Part 3 in this blog post.
 
 ## Part 1: Safety Invariant
 
@@ -258,7 +256,7 @@ fn check_count_bytes() {
 
 By leveraging `arbitrary_cstr`, we avoided manual null insertion and verification. Instead, we relied on `arbitrary_cstr` to produce a valid `CStr` that inherently satisfies the safety invariant. We then directly compared `count_bytes()` with the length of `c_str.to_bytes()` to confirm correctness.
 
-### Example : `as_ptr`
+### Example: `as_ptr`
 
 The `as_ptr` method returns a raw pointer to the underlying C string. Although `as_ptr` is safe to call, dereferencing the returned pointer is inherently unsafe. We must verify that `as_ptr` does not violate the safety invariant and that it points to a valid memory region containing the C string plus its null terminator.
 
@@ -297,11 +295,11 @@ In this harness, we confirmed that:
 
 - `as_ptr()` returns a pointer that can be safely read for `len` bytes.
 - Each byte read from the raw pointer matches the corresponding byte in `bytes_with_nul`. This verification was performed within an unsafe block, as raw pointer manipulation (e.g., pointer arithmetic) is inherently unsafe.
-- The CStr maintains its safety invariant.
+- The `CStr` maintains its safety invariant.
 
 ## Part 3: Unsafe Methods
 
-In Part 3, we focused on verifying the unsafe methods provided by CStr. Specifically, we examined `from_bytes_with_nul_unchecked`, `strlen`, and `from_ptr`, ensuring they maintain the safety invariant when used correctly.
+In Part 3, we focused on verifying the unsafe methods provided by `CStr`. Specifically, we examined `from_bytes_with_nul_unchecked `, `strlen `, and `from_ptr`, ensuring they maintain the safety invariant when used correctly.
 
 We followed a similar workflow as before; however, before writing the harnesses, we first annotated the unsafe functions with [function contracts](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md).
 
@@ -336,7 +334,7 @@ pub const unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> &CStr { /* Im
 - The last byte must be a null terminator (`0`).
 - There must be no null bytes within the slice, except at the end.
 
-Sound familiar? It is because these preconditions align exactly with the safety invariant for `CStr`.
+Observe that these preconditions align exactly with the safety invariant for `CStr`.
 
 #### Postconditions (`#[ensures]`)
 
