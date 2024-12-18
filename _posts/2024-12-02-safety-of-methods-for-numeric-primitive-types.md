@@ -52,7 +52,7 @@ We will walk through each part with examples from the Unsafe Integer Methods par
 
 ### 1. Specifying Safety Preconditions
 
-The following code demonstrates how to specify safety preconditions for an unsafe numeric method `unchecked_add` using [**function contracts**](https://github.com/model-checking/kani/blob/main/rfc/src/rfcs/0009-function-contracts.md) to ensure correct behavior under the stated conditions.
+The following code demonstrates how to specify safety preconditions for an unsafe numeric method `unchecked_add` using [**function contracts**](https://model-checking.github.io/kani/reference/experimental/contracts.html) to ensure correct behavior under the stated conditions.
 
 ```rust
 #[requires(!self.overflowing_add(rhs).1)] // We added this precondition
