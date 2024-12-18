@@ -8,7 +8,7 @@ In this blog post, we discuss how we verified the absence of arithmetic overflow
 
 ## Introduction
 
-Ensuring the correctness and safety of numeric operations is crucial for developing reliable systems. In high-performance applications, numeric operations often require bypassing checks to maximize efficiency. However, ensuring the safety of these methods under their stated preconditions is critical to preventing undefined behavior.
+Ensuring the correctness and safety of numeric operations is crucial for developing reliable systems. In high-performance applications, numeric operations often bypass checks to maximize efficiency. However, ensuring the safety of these methods under their stated preconditions is critical to preventing undefined behavior.
 
 From 09/2024 to 12/2024, we have rigorously analyzed unsafe methods provided by Rust's numeric primitive types, such as `unchecked_add` and `unchecked_sub`, which omit runtime checks for overflow and underflow, using formal verification techniques.
 
