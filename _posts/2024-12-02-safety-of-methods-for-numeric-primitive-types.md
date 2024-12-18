@@ -273,7 +273,7 @@ Verification failed for - num::verify::checked_to_int_unchecked_f32
 Complete - 0 successfully verified harnesses, 1 failures, 1 total.
 ```
 
-From the verification report, we realized that Kani did not support `float_to_int_unchecked` which is internally called by `to_int_unchecked`. We filed a [Kani feature request for `float_to_int_unchecked`](https://github.com/model-checking/kani/issues/3629) immediately, and `float_to_int_unchecked` was introduced shortly [2].
+From the verification report, we realized that Kani did not support `float_to_int_unchecked` which is internally called by `to_int_unchecked`. We filed a [Kani feature request for `float_to_int_unchecked`](https://github.com/model-checking/kani/issues/3629) immediately, and `float_to_int_unchecked` was introduced shortly after [2].
 
 ### Second Try
 
