@@ -379,7 +379,7 @@ This [challenge](https://model-checking.github.io/verify-rust-std/challenges/001
 
 Our work contributes to the robustness of Rust's standard library and highlights the importance of formal verification tools in modern software development.
 
-We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore [Kani](https://github.com/model-checking/kani) and contribute to its ongoing development.
+We hope this post provides valuable insights into the verification process of unsafe numeric methods in Rust. If you're interested in formal verification or Rust programming, we encourage you to explore [Kani](https://github.com/model-checking/kani) and contribute to its ongoing development, or to [contribute to the standard library verification effort yourself](https://github.com/model-checking/verify-rust-std).
 
 ## References
 
