@@ -120,7 +120,7 @@ A harness contains several parts:
 
 ### 3. Handling Large Input Spaces
 
-For methods like `unchecked_mul`, verifying over the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals.
+For methods like `unchecked_mul`, verifying the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals.
 
 The following code illustrates a strategy to handle large input spaces by partitioning input ranges into manageable intervals for verification, focusing on critical edge cases.
 
