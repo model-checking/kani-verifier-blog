@@ -348,6 +348,7 @@ Verifying methods with large integer types was challenging due to the vast numbe
 
 - Partitioning Input Ranges: We targeted critical intervals where overflows are most likely, such as boundary values and mid-range points.
 - Using Assumptions: Leveraging `kani::assume`, we constrained inputs to these manageable ranges, ensuring comprehensive coverage of important cases without overwhelming the verifier.
+- Rationale: According to Randy E. Bryant's "Graph-Based Algorithms for Boolean Function Manipulation" (1986), the Boolean function representing all outputs of a multiplier as a BDD is exponential in the size of the operands. While a more compact representation can be achieved in CNF, it remains quadratic in the size of the operands. This complexity poses significant challenges for SAT solvers. Interestingly, this difficulty has practical implications: if solving such problems were more efficient, we could feasibly perform number factorization and thereby compromise some of today's cryptographic algorithms.
 
 ### Ensuring Assumptions Reflect Safety Preconditions
 
