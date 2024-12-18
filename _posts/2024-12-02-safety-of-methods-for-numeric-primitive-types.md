@@ -118,6 +118,8 @@ A harness contains several parts:
 3. **Unsafe Execution**: The invocation of `unchecked_add` within an unsafe block for verification. [`unsafe`](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html) code blocks enable unsafe Rust features, such as calling unsafe functions or dereferencing raw pointers.
 4. **Assertions**: Similar to assumptions, Kani expands `#[ensures(postcondition)]`to `kani::assert(postcondition)` and inserts in the harness after the unsafe function call. This assertion checks if the function behaves as expected (e.g. returning an expected result) or if certain safety invariants hold after function call.
 
+**Summary**: Kani verifies a function's contract by assuming the specified preconditions, executing the function within these constraints, and asserting that the postconditions are satisfied. During this process, Kani ensures that the unsafe code adheres to Rust's safety guarantees and does not trigger undefined behavior.
+
 ### 3. Handling Large Input Spaces
 
 For methods like `unchecked_mul`, verifying the entire input space is infeasible due to the exponential number of possibilities. To improve the performance, we partitioned the input space into intervals.
