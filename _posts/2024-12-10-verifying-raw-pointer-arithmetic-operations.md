@@ -28,9 +28,9 @@ This post details our approach, highlights the implementation process, and discu
 
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0003-pointer-arithmentic.html) focuses on formally verifying raw pointer arithmetic functions in Rust's standard library. It is structured into two parts:
 
-1. Safety of pointer arithmetic functions: All unsafe functions provided in the challenge (e.g., `offset`, `byte_add`, `offset_from`, etc.) must be annotated with safety contracts, which must then be formally verified.
+1. Safety of pointer arithmetic functions: All unsafe functions provided in the challenge (e.g., `offset`, `byte_add`, `offset_from`, etc.) must be annotated with safety contracts, which must be formally verified.
     * The verification must be done for the following pointee types:
-        * All integers types
+        * All integer types
         * At least one `dyn Trait`
         * At least one slice
         * For unit type
@@ -54,33 +54,33 @@ The implementation addressed the two parts of the challenge as follows:
 
 ### Function Analysis
 
-The analysis began with a thorough review of the functions listed for verification. This included, examining the implmentation of these functions, studying the official Rust [documentation](https://doc.rust-lang.org/std/primitive.pointer.html) and understanding their safety requirements. This helped identify potential sources of undefined behavior, understand their intended usage. These insights were critical in defining accurate safety contracts. 
+The analysis began with a thorough review of the functions listed for verification. This involved examining their implementation, studying the official Rust documentation, and understanding their safety requirements. This process was instrumental in identifying potential sources of undefined behavior and clarifying their intended usage. These insights were critical for defining precise and robust safety contracts.
 
-Among the given functions, two key functions—`offset` and `offset_from`—stood out as foundational due to their role in enabling other operations. 
-* [`offset(self, count: isize) -> *const T`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset): Adds a signed offset to a pointer. The offset is specified by the argument `count` which is specified in units of `T`; e.g., a count of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
+Among the functions analyzed, two stood out as foundational—offset and offset_from—due to their central role in enabling other pointer operations: 
+* [`offset(self, count: isize) -> *const T`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset): Adds a signed offset to a pointer. The offset is specified by the argument `count` expressed in units of `T`; e.g., a count of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
 * [`offset_from(self, origin: *const T) -> isize`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset_from): Calculates the distance between two pointers. The returned value is in units of T: the distance in bytes divided by `mem::size_of::<T>()`.
 
-Functions like `add` and `byte_offset_from` rely heavily on these operations. For instance:
+Functions like `add` and `byte_offset_from` heavily rely on these operations. For instance:
 * `add` internally calls `offset` to increment a pointer by a certain offset.
 * `byte_offset_from` casts pointers to `u8` before invoking `offset_from`.
 
-By focusing on the safety of offset and offset_from, the verification effort concentrated on the fundamental components, providing a strong base for related functions. This approach made it easier to define and extend contracts and proofs to dependent functions.
+By initially focusing on the safety of `offset` and `offset_from`, the verification effort focused on the fundamental components that underpin many related functions. This approach made it easier to define and extend contracts and proofs to dependent functions.
 
-### Funtion Contracts
+### Function Contracts
 
-The preconditions and postconditions for the functions were primarily derived from the safety requirements outlined in the official Rust [documentation](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset). For example, the safety requirements stated in teh documentation for the `offset` function are as follows:
+The preconditions and postconditions for the functions were primarily derived from the safety requirements outlined in the official Rust [documentation](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset). For example, the safety requirements stated in the documentation for the `offset` function are as follows:
 1. The offset in bytes, `count * size_of::<T>()`, computed on mathematical integers (without “wrapping around”), must fit in an `isize`.
 2. If the computed offset is non-zero, then `self` must be derived from a pointer to some allocated object, and the entire memory range between `self` and the `result` must be in bounds of that allocated object. In particular, this range must not “wrap around” the edge of the address space.
 
 #### Preconditions
 The above safety requirements lead to the following preconditions:
-1. If T is a zero-sized type, i.e., `size_of::<T>() == 0`, then the computed offset (`count * size_of::<T>()`) will always be 0. Hence, both the safety checks will be satisfied and no other validations are required.
-2. Else for non-zero-sized types,
-    1. the product of `count` and `size_of::<T>()` must not overflow `isize` (Safety Requirement #1).
-    2. adding the computed offset (`count * size_of::<T>()`) to the original pointer (`self`) must not cause overflow (Safety Requirement #1).
+1. If T is a zero-sized type, i.e., `size_of::<T>() == 0`, then the computed offset (`count * size_of::<T>()`) will always be 0. Thus, both safety checks are inherently satisfied, and no additional validations are required.
+2. For non-zero-sized types,
+    1. The product of `count` and `size_of::<T>()` must not overflow `isize` (Safety Requirement #1).
+    2. Adding the computed offset (`count * size_of::<T>()`) to the original pointer (`self`) must not cause overflow (Safety Requirement #1).
     3. Both the original pointer (self) and the result of self.wrapping_offset(count) must point to the same allocated object (Safety Requirement #2). To support reasoning about provenance of two pointers, the `same_allocation` API was introduced in Kani. This is discussed in detail in the [Challenges](#challenges) 
 
-Translating these into code and stating them as preconditions using the `#[requires]` attribute gives us:
+These preconditions can be translated into code using the `#[requires]` attribute as follows: 
 
 ```rust
 #[requires(
@@ -97,11 +97,11 @@ Translating these into code and stating them as preconditions using the `#[requi
 
 #### Postconditions
 
-Based on the safety requirements and the function working, the follwoing postconditions can be specified:
+Based on the safety requirements and the function behavior, the following postconditions can be specified:
 1. If the computed offset is 0, the resulting pointer will point to the same address as the original pointer (`self`).
 2. Otherwise, the resulting pointer will point to an address within the bounds of the allocated object from which the original pointer (`self`) was derived.
 
-Translating these into code and stating them as postconditions using the `#[ensures]` attribute gives us:
+These postconditions can be translated into code using the `#[ensures]` attribute as follows:
 
 ```rust
 #[ensures(|result|
@@ -112,62 +112,75 @@ Translating these into code and stating them as postconditions using the `#[ensu
 )]
 ```
 
-These preconditions and postconditions align with the safety requirements specified above. Writing contracts for `offset` first helped us a lay a foundation for verifying other pointer arithmetic functions such as `add`, `sub` and so on.
+These preconditions and postconditions align with the safety requirements specified above. Writing contracts for `offset` first helped us lay a foundation for verifying other pointer arithmetic functions such as `add`, `sub`, and others.
 
 ### Harnesses
 
+Harnesses were written to validate the function contracts for various pointee types. Kani uses these harnesses to formally verify the contracts against diverse test cases, ensuring their correctness and robustness.
 
+Each harness is designed to test the contracts of a specific function. To achieve this, they follow two primary steps:
+1. **Generate the input arguments non-deterministically**: The inputs are created to represent various valid and edge-case scenarios without explicitly hardcoding them.
+2. **Invoke the function with these arguments**: The function under test is called using the generated inputs, allowing Kani to evaluate whether the preconditions and postconditions hold for all possible inputs.
 
-### 2. Pointee Types
+#### Example Proof for the `offset` Function
 
-In our implementation, we cover a variety of pointee types to ensure robust verification:
+```rust
+#[kani::proof_for_contract(<*const u8>::offset)]
+pub fn check_const_add_i8() {
+    // 200 bytes are large enough to cover all pointee types used for testing
+    const BUF_SIZE: usize = 200;
+    let mut generator = kani::PointerGenerator::<BUF_SIZE>::new();
+    let test_ptr: *const u8 = generator.any_in_bounds().ptr;
+    let count: isize = kani::any();
+    unsafe {
+        test_ptr.offset(count);
+    }
+}
+```
 
-- **Integer Types**: Includes `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, and others. These fundamental types are frequently used in pointer arithmetic.
-   - Integer types are common in pointer arithmetic and cover both signed and unsigned values.
+This harness validates the `offset` function for pointers of type `*const u8`. It ensures that the function adheres to the safety contracts defined (as given in the previous section). The `<*const T>::offset` function accepts two arguments: a pointer (`*const T`) and an offset (`isize`). The proof generates these non-deterministically as follows:
+* The `count` variable, of type `isize`, has an `Arbitrary` trait implemented, enabling the generation of non-deterministic values using `kani::any()`.
+* `kani::PointerGenerator` is used to create a pointer `test_ptr`, guaranteed to lie within the bounds of the allocated buffer.
 
-   - **Example**: Verification for `offset` on `i32`:
-    ```rust
-    generate_arithmetic_harnesses!(
-        i32,
-        check_const_add_i32,
-        check_const_sub_i32,
-        check_const_offset_i32
-    );
-    ```
-    
-- **Slices**: Slices allow pointer operations over contiguous memory blocks.
-    - **Example**: Verification for `offset` on a slice of `i32`:
-    ```rust
-    generate_slice_harnesses!(
-        i32,
-        check_const_add_slice_i32,
-        check_const_sub_slice_i32,
-        check_const_offset_slice_i32
-    );
-    ```
-- **Dynamic Traits (`dyn Trait`)**: Verification extends to trait objects, providing support for dynamic dispatch.
-    - **Example**: Verification for `byte_offset` on `dyn TestTrait`:
-    ```rust
-    gen_const_byte_arith_harness_for_dyn!(byte_offset, check_const_byte_offset_dyn);
-    ```
+The `offset` function is called in an unsafe block with the generated `test_ptr` and `count`.
 
-By including these types, we address diverse use cases and scenarios in Rust's ecosystem.
+PointerGenerator can also create pointers with different allocation statuses, such as out-of-bounds, dangling, or null pointers. This was particularly useful in writing harnesses for `offset_from`, which require testing pointers with varied allocation statuses (see [here](https://github.com/model-checking/verify-rust-std/blob/main/library/core/src/ptr/const_ptr.rs)). 
 
+However, the `PointerGenerator` API only supports generating pointers whose pointee types implement the `Arbitrary` trait. In other words, any `*const T` can be generated as long as `T` has the Arbitrary trait implemented and the generator is wide enough for `T`. Pointers with integer (`*const u32`) or tuple (`*const (u16, bool)`) pointee types can be generated but not slice (`*const [T]`) or dyn Trait pointee types. To test slice pointers, one can generate a non-deterministic slice from an array and derive a pointer from it, as shown below:
 
-#### Macros for Automation
+```rust
+let arr: [u32; 8] = kani::Arbitrary::any_array();
+let slice: &[u32] = kani::slice::any_slice_of_array(&arr);
+let ptr: *const [u32] = slice;
+```
 
+Currently, an Arbitrary trait hasn't been implemented for pointers that could support non-deterministic generation of pointers covering the entire address space and different allocation statuses. An [issue](https://github.com/model-checking/kani/issues/3696) has been created to track this. 
+ 
+#### Panicking Proofs
 
-### 3. Usage Scenarios
+Sometimes, negative verification is necessary. The (`#[kani::should_panic]` attribute)[https://model-checking.github.io/kani/reference/attributes.html#kanishould_panic] can be used to specify that a proof harness is expected to panic.
 
+For instance:
 
-#### **`String::remove`**: Removing characters from a `String`
+```rust
+// Proof for unit size will panic as offset_from needs the pointee size to be greater than 0
+ #[kani::proof_for_contract(<*const ()>::offset_from)]
+ #[kani::should_panic]
+ pub fn check_const_offset_from_unit() {
+     let val: () = ();
+     let src_ptr: *const () = &val;
+     let dest_ptr: *const () = &val;
+     unsafe {
+         dest_ptr.offset_from(src_ptr);
+     }
+ }
+```
 
-The `String::remove` method removes a character at a specified index in a string and shifts the remaining characters to fill the gap. The Kani proof verifies:
-- The string's length decreases by one after the removal.
-- The removed character is a valid ASCII character.
-- The removed character matches the character at the specified index in the original string.
+The `offset_from` function being verified in this harness [panics](https://doc.rust-lang.org/std/primitive.pointer.html#panics) if the pointee is ZST. Since unit type `()` is a ZST, the harness is expected to panic. The `#[kani::should_panic]` attribute ensures this behavior is correctly tested.
 
-#### **`Vec::swap_remove`**: Efficiently removing and replacing elements in a vector
+### Verifying Usages
+
+#### **`Vec::swap_remove`**
 
 The `Vec::swap_remove` method removes an element at a specified index and replaces it with the last element in the vector. The Kani proof ensures:
 - The vector's length decreases by one after the operation.
@@ -175,17 +188,15 @@ The `Vec::swap_remove` method removes an element at a specified index and replac
 - If the removed index is not the last, the index now contains the last element of the original vector.
 - All other elements remain unaffected.
 
-#### **`VecDeque::swap`**: Swapping elements in a double-ended queue
+#### **`VecDeque::swap`**
 
 The `VecDeque::swap` method swaps two elements at specified indices in a `VecDeque`. The Kani proof verifies:
 - The elements at the specified indices are swapped correctly.
 - All other elements in the `VecDeque` remain unchanged.
 
-
 #### Summary of Usage Proofs
 
 These proofs ensure the following:
-- For `String::remove`, the operation adheres to ASCII validity, proper index bounds, and string length constraints.
 - For `Vec::swap_remove`, the vector maintains integrity during element removals and replacements.
 - For `Option::as_slice`, the resulting slice is valid and matches the contained data.
 - For `VecDeque::swap`, swapped and unaffected elements are verified for correctness.
