@@ -10,14 +10,14 @@ Rust is famous for its strong memory safety features and that has made it popula
 
 Our challenge focused on verifying pointer arithmetic in Rust. By this, we ensured that even unsafe code is used correctly which helps prevent vulnerabilities and make Rust applications more reliable and secure.
 
-# Problem statement:
+#### Problem statement:
 AWS is working to ensure the safety of Rust’s unsafe constructs using formal verification and automated reasoning. The problem statement we selected for our team was to verify the safety of standard library code that handles pointer arithmetic operations using the Kani verifier (a formal verification tool). By this, we aimed to strengthen trust in Rust’s safety guarantees in large-scale, safety-critical systems. 
 
-# What is pointer arithmetic?
+#### What is pointer arithmetic?
 Pointer arithmetic operations include addition, subtraction and offset which deal with raw pointer manipulation and accessing specific memory locations.
 Pointer arithmetic is commonly used in applications that require precise control over memory such as operating systems, embedded systems and performance critical systems. If these operations are implemented incorrectly, they can cause serious harm and issues such as out-of-bounds memory access and data corruption/crashes.
 
-# What has our team has done?
+#### What has our team has done?
 Our team utilized Kani, a formal verification tool to check the safety of raw pointer arithmetic in Rust. Our achievements are:
 -	We implemented and verification function contracts for 16 pointer operations, such as add(), sub(), and offset().
 -	We validated these contracts using Kani proofs across five different pointee types: integers, slices, unit, composite and dynamic traits.
