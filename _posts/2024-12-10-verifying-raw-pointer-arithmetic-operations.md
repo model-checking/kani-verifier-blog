@@ -22,8 +22,7 @@ Our team utilized Kani, a formal verification tool to check the safety of raw po
 -	We implemented and verification function contracts for 16 pointer operations, such as add(), sub(), and offset().
 -	We validated these contracts using Kani proofs across five different pointee types: integers, slices, unit, composite and dynamic traits.
 
-Further details are discussed in the blog.
-
+This post details our approach, highlights the implementation process, and discusses the challenges encountered while ensuring the safety of pointer arithmetic in Rust.
 
 ## Challenge Overview
 
