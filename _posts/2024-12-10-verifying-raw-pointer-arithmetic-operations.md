@@ -14,28 +14,45 @@ In this challenge, we focused on formally verifying the safety of these function
 
 The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0003-pointer-arithmentic.html) focuses on formally verifying raw pointer arithmetic functions in Rust's standard library. It is structured into two parts:
 
-1. Safety of pointer arithmetic functions: All the unsafe functions given in the challenge (for example, `offset`, `byte_add`, `offset_from`, etc.) must be annotated with safety contracts and the contracts must be verified.
-    * Additionally, verification must be done for the following pointee types:
+1. Safety of pointer arithmetic functions: All unsafe functions provided in the challenge (e.g., `offset`, `byte_add`, `offset_from`, etc.) must be annotated with safety contracts, which must then be formally verified.
+    * The verification must be done for the following pointee types:
         * All integers types
         * At least one `dyn Trait`
         * At least one slice
         * For unit type
         * At least one composite type with multiple non-ZST fields.
-2. Safety of usages: Functions using the raw pointer arithmetic operations in their implementations must be proved to be safe.
+2. Safety of usages: Few functions that utilize raw pointer arithmetic methods in their implementation must be proven safe.
 
-Proofs written for any of the above methods must ensure the absence of the following [undefined behaviors](https://github.com/rust-lang/reference/blob/142b2ed77d33f37a9973772bd95e6144ed9dce43/src/behavior-considered-undefined.md):
+Any proofs written for these functions must ensure the absence of the following [undefined behaviors](https://github.com/rust-lang/reference/blob/142b2ed77d33f37a9973772bd95e6144ed9dce43/src/behavior-considered-undefined.md):
 * Accessing dangling or misaligned pointers
 * Invoking undefined behavior via compiler intrinsics
 * Producing an invalid value, even in private fields and locals.
 * Performing a place projection that violates the requirements of in-bounds pointer arithmetic.
 
-## Approach
-
-
-
 ## Implementation
 
-### 1. Placeholder
+### Approach
+The implementation addressed the two parts of the challenge as follows:
+
+1. **Verification of Pointer Arithmetic Functions**: Firstly, we identified `offset` and `offset_from` as foundational to other pointer arithmetic functions, as these two operations form the basis of many related functionalities. Then, we focused on formally verifying the raw pointer arithmetic functions (offset, offset_from, etc.) by specifying and verifying their safety contracts. These contracts captured preconditions and postconditions to prevent undefined behavior. Harnesses were written to verify the safety contracts. These harnesses were designed to handle five distinct pointee types, as per the challenge specifications.
+
+2. **Verification of Usages**: The goal was to ensure that the contracts for these methods were sufficient and that the usage of pointer arithmetic in other functions adhered to the defined safety guarantees. Documentation and analysis of function behavior were essential in defining input space and verifying that the functions operated safely across all expected inputs.
+
+### Function Analysis
+
+The analysis began with a thorough review of the functions listed for verification. This included, examining the implmentation of these functions, studying the official Rust documentation and understanding their safety requirements. This helped identify potential sources of undefined behavior, understand their intended usage. These insights were critical in defining accurate safety contracts. 
+
+Among the given functions, two key functions—`offset` and `offset_from`—stood out as foundational due to their role in enabling other operations. 
+* `offset`: Adjusts a pointer by a specified distance, serving as the foundation for pointer arithmetic.
+* `offset_from`: Computes the distance between two pointers, enabling relational pointer calculations.
+
+Functions like `add` and `byte_offset_from` rely heavily on these operations. For instance:
+* `add` internally calls `offset` to increment pointers.
+* `byte_offset_from` casts pointers to `u8` before invoking `offset_from`.
+
+By focusing on the safety of offset and offset_from, the verification effort concentrated on the fundamental components, providing a strong base for related functions. This approach made it easier to define and extend contracts and proofs to dependent functions.
+
+
 
 
 ### 2. Pointee Types
