@@ -232,8 +232,6 @@ kani::mem::same_allocation(ptr1, ptr2);
 ```
 The introduction of `kani::mem::same_allocation` significantly simplified contract verification for pointer arithmetic functions. Instead of relying on custom assertions and manual tracking of allocation bounds, now we could use a clean and expressive way to define function contracts.
 
----
-
 ### 2. Determining the Necessity of Pointer Alignment in Function Contracts
 
 #### Overview
@@ -254,8 +252,6 @@ Here, `ptr_unaligned` is not aligned for type `u8`, but the operation `add` is v
 
 #### Impact on Verification
 Once we realized that alignment checks were unnecessary, we refactored the function contracts by removing alignment checks from both preconditions and postconditions. It is now the caller's responsibility to ensure pointer alignment when dereferencing raw pointers.
-
----
 
 ### 3. Handling Function Contract Stubbing with Pointer Return Types 
 
