@@ -40,18 +40,67 @@ The implementation addressed the two parts of the challenge as follows:
 
 ### Function Analysis
 
-The analysis began with a thorough review of the functions listed for verification. This included, examining the implmentation of these functions, studying the official Rust documentation and understanding their safety requirements. This helped identify potential sources of undefined behavior, understand their intended usage. These insights were critical in defining accurate safety contracts. 
+The analysis began with a thorough review of the functions listed for verification. This included, examining the implmentation of these functions, studying the official Rust [documentation](https://doc.rust-lang.org/std/primitive.pointer.html) and understanding their safety requirements. This helped identify potential sources of undefined behavior, understand their intended usage. These insights were critical in defining accurate safety contracts. 
 
 Among the given functions, two key functions—`offset` and `offset_from`—stood out as foundational due to their role in enabling other operations. 
-* `offset`: Adjusts a pointer by a specified distance, serving as the foundation for pointer arithmetic.
-* `offset_from`: Computes the distance between two pointers, enabling relational pointer calculations.
+* [`offset(self, count: isize) -> *const T`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset): Adds a signed offset to a pointer. The offset is specified by the argument `count` which is specified in units of `T`; e.g., a count of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
+* [`offset_from(self, origin: *const T) -> isize`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset_from): Calculates the distance between two pointers. The returned value is in units of T: the distance in bytes divided by `mem::size_of::<T>()`.
 
 Functions like `add` and `byte_offset_from` rely heavily on these operations. For instance:
-* `add` internally calls `offset` to increment pointers.
+* `add` internally calls `offset` to increment a pointer by a certain offset.
 * `byte_offset_from` casts pointers to `u8` before invoking `offset_from`.
 
 By focusing on the safety of offset and offset_from, the verification effort concentrated on the fundamental components, providing a strong base for related functions. This approach made it easier to define and extend contracts and proofs to dependent functions.
 
+### Funtion Contracts
+
+The preconditions and postconditions for the functions were primarily derived from the safety requirements outlined in the official Rust [documentation](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset). For example, the safety requirements stated in teh documentation for the `offset` function are as follows:
+1. The offset in bytes, `count * size_of::<T>()`, computed on mathematical integers (without “wrapping around”), must fit in an `isize`.
+2. If the computed offset is non-zero, then `self` must be derived from a pointer to some allocated object, and the entire memory range between `self` and the `result` must be in bounds of that allocated object. In particular, this range must not “wrap around” the edge of the address space.
+
+#### Preconditions
+The above safety requirements lead to the following preconditions:
+1. If T is a zero-sized type, i.e., `size_of::<T>() == 0`, then the computed offset (`count * size_of::<T>()`) will always be 0. Hence, both the safety checks will be satisfied and no other validations are required.
+2. Else for non-zero-sized types,
+    1. the product of `count` and `size_of::<T>()` must not overflow `isize` (Safety Requirement #1).
+    2. adding the computed offset (`count * size_of::<T>()`) to the original pointer (`self`) must not cause overflow (Safety Requirement #1).
+    3. Both the original pointer (self) and the result of self.wrapping_offset(count) must point to the same allocated object (Safety Requirement #2). To support reasoning about provenance of two pointers, the `same_allocation` API was introduced in Kani. This is discussed in detail in the [Challenges](#challenges) 
+
+Translating these into code and stating them as preconditions using the `#[requires]` attribute gives us:
+
+```rust
+#[requires(
+    // Precondition 1
+    (core::mem::size_of::<T>() == 0) ||
+    // Precondition 2.1
+    (count.checked_mul(core::mem::size_of::<T>() as isize)
+        // Precondition 2.2
+        .map_or(false, |computed_offset| (self as isize).checked_add(computed_offset).is_some()) &&
+        // Precondition 2.3
+        core::ub_checks::same_allocation(self, self.wrapping_offset(count)))
+)]
+```
+
+#### Postconditions
+
+Based on the safety requirements and the function working, the follwoing postconditions can be specified:
+1. If the computed offset is 0, the resulting pointer will point to the same address as the original pointer (`self`).
+2. Otherwise, the resulting pointer will point to an address within the bounds of the allocated object from which the original pointer (`self`) was derived.
+
+Translating these into code and stating them as postconditions using the `#[ensures]` attribute gives us:
+
+```rust
+#[ensures(|result|
+    // Postcondition 1
+    (self.addr() == (*result).addr()) ||
+    // Postcondition 2
+    core::ub_checks::same_allocation(self, *result as *const T)
+)]
+```
+
+These preconditions and postconditions align with the safety requirements specified above. Writing contracts for `offset` first helped us a lay a foundation for verifying other pointer arithmetic functions such as `add`, `sub` and so on.
+
+### Harnesses
 
 
 
@@ -96,7 +145,6 @@ By including these types, we address diverse use cases and scenarios in Rust's e
 
 ### 3. Usage Scenarios
 
----
 
 #### **`String::remove`**: Removing characters from a `String`
 
@@ -104,8 +152,6 @@ The `String::remove` method removes a character at a specified index in a string
 - The string's length decreases by one after the removal.
 - The removed character is a valid ASCII character.
 - The removed character matches the character at the specified index in the original string.
-
----
 
 #### **`Vec::swap_remove`**: Efficiently removing and replacing elements in a vector
 
@@ -115,23 +161,12 @@ The `Vec::swap_remove` method removes an element at a specified index and replac
 - If the removed index is not the last, the index now contains the last element of the original vector.
 - All other elements remain unaffected.
 
----
-
-#### **`Option::as_slice`**: Converting an `Option` into a slice
-
-The `Option::as_slice` method converts an `Option` containing a collection into a slice. The proof would validate:
-- The result is a valid slice if the `Option` contains a value.
-- The length of the resulting slice matches the length of the contained collection.
-
----
-
 #### **`VecDeque::swap`**: Swapping elements in a double-ended queue
 
 The `VecDeque::swap` method swaps two elements at specified indices in a `VecDeque`. The Kani proof verifies:
 - The elements at the specified indices are swapped correctly.
 - All other elements in the `VecDeque` remain unchanged.
 
----
 
 #### Summary of Usage Proofs
 
@@ -140,9 +175,6 @@ These proofs ensure the following:
 - For `Vec::swap_remove`, the vector maintains integrity during element removals and replacements.
 - For `Option::as_slice`, the resulting slice is valid and matches the contained data.
 - For `VecDeque::swap`, swapped and unaffected elements are verified for correctness.
-
-These examples demonstrate how Kani ensures safety and correctness in common Rust operations.
-
 
 ## Challenges
 
