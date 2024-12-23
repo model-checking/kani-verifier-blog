@@ -188,6 +188,12 @@ The `Vec::swap_remove` method removes an element at a specified index and replac
 - If the removed index is not the last, the index now contains the last element of the original vector.
 - All other elements remain unaffected.
 
+#### **`Option::as_slice`**
+
+The `Option::as_slice` method converts an `Option` containing a collection into a slice. The proof would validate:
+- The result is a valid slice if the `Option` contains a value.
+- The length of the resulting slice matches the length of the contained collection.
+
 #### **`VecDeque::swap`**
 
 The `VecDeque::swap` method swaps two elements at specified indices in a `VecDeque`. The Kani proof verifies:
