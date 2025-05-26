@@ -209,7 +209,7 @@ These proofs ensure the following:
 
 ## Challenges
 
-Throughout the project, we faced several technical challenges related to Rust's specification, the Kani verifier's limitations, and the complex nature of pointer arithmetic operations. Below are some of the key challenges and how we addressed them or how the could be addressed in the future.
+Throughout the project, we faced several technical challenges related to Rust's specification, Kani's limitations, and the complex nature of pointer arithmetic operations. Below are some of the key challenges and how we addressed them or how the could be addressed in the future.
 
 ### 1. Ensuring Pointer Stays Within Allocation Bounds
 
