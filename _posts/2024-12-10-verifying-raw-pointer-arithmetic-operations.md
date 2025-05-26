@@ -35,7 +35,7 @@ The [challenge](https://model-checking.github.io/verify-rust-std/challenges/0003
         * At least one slice
         * For unit type
         * At least one composite type with multiple non-ZST fields.
-2. Safety of usages: Few functions that utilize raw pointer arithmetic methods in their implementation must be proven safe.
+2. Safety of usages: Some functions that utilize raw pointer arithmetic methods in their implementation must be proven safe.
 
 Any proofs written for these functions must ensure the absence of the following [undefined behaviors](https://github.com/rust-lang/reference/blob/142b2ed77d33f37a9973772bd95e6144ed9dce43/src/behavior-considered-undefined.md):
 * Accessing dangling or misaligned pointers
