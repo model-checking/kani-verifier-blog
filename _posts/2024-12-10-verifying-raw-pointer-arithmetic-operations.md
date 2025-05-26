@@ -144,7 +144,7 @@ This harness validates the `offset` function for pointers of type `*const u8`. I
 
 The `offset` function is called in an unsafe block with the generated `test_ptr` and `count`.
 
-PointerGenerator can also create pointers with different allocation statuses, such as out-of-bounds, dangling, or null pointers. This was particularly useful in writing harnesses for `offset_from`, which require testing pointers with varied allocation statuses (see [here](https://github.com/model-checking/verify-rust-std/blob/main/library/core/src/ptr/const_ptr.rs)). 
+Kani's pointer generator can also create pointers with different allocation statuses, such as out-of-bounds, dangling, or null pointers. This was particularly useful in writing harnesses for `offset_from`, which require testing pointers with varied allocation statuses (see [here](https://github.com/model-checking/verify-rust-std/blob/main/library/core/src/ptr/const_ptr.rs)). 
 
 However, the `PointerGenerator` API only supports generating pointers whose pointee types implement the `Arbitrary` trait. In other words, any `*const T` can be generated as long as `T` has the Arbitrary trait implemented and the generator is wide enough for `T`. Pointers with integer (`*const u32`) or tuple (`*const (u16, bool)`) pointee types can be generated but not slice (`*const [T]`) or dyn Trait pointee types. To test slice pointers, one can generate a non-deterministic slice from an array and derive a pointer from it, as shown below:
 
