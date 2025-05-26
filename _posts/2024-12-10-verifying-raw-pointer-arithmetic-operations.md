@@ -6,7 +6,7 @@ Authors: [Surya Togaru](https://github.com/stogaru), [Yifei Wang](https://github
 
 ## Introduction
 
-Rust is famous for its strong memory safety features and that has made it popular for building reliable and secure systems like operating systems. However, Rust also permits the use of unsafe code block for tasks like pointer arithmetic operations which is useful but it can bypass Rust’s safety checks and lead to security issues or bugs.
+Rust is famous for its strong memory safety features and that has made it popular for building reliable and secure systems like operating systems. However, Rust also permits the use of unsafe code blocks for tasks like pointer arithmetic operations which is useful but it can bypass Rust’s safety checks and lead to security issues or bugs.
 
 Our challenge focused on verifying pointer arithmetic in Rust. By this, we ensured that even unsafe code is used correctly which helps prevent vulnerabilities and make Rust applications more reliable and secure.
 
