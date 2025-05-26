@@ -74,7 +74,7 @@ The preconditions and postconditions for the functions were primarily derived fr
 
 #### Preconditions
 The above safety requirements lead to the following preconditions:
-1. If T is a zero-sized type, i.e., `size_of::<T>() == 0`, then the computed offset (`count * size_of::<T>()`) will always be 0. Thus, both safety checks are inherently satisfied, and no additional validations are required.
+1. If `T` is a zero-sized type, i.e., `size_of::<T>() == 0`, then the computed offset (`count * size_of::<T>()`) will always be 0. Thus, both safety checks are inherently satisfied, and no additional validations are required.
 2. For non-zero-sized types,
     1. The product of `count` and `size_of::<T>()` must not overflow `isize` (Safety Requirement #1).
     2. Adding the computed offset (`count * size_of::<T>()`) to the original pointer (`self`) must not cause overflow (Safety Requirement #1).
