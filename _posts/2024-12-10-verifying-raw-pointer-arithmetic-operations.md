@@ -56,7 +56,7 @@ The implementation addressed the two parts of the challenge as follows:
 
 The analysis began with a thorough review of the functions listed for verification. This involved examining their implementation, studying the official Rust documentation, and understanding their safety requirements. This process was instrumental in identifying potential sources of undefined behavior and clarifying their intended usage. These insights were critical for defining precise and robust safety contracts.
 
-Among the functions analyzed, two stood out as foundational—offset and offset_from—due to their central role in enabling other pointer operations: 
+Among the functions analyzed, two stood out as foundational—`offset` and `offset_from`—due to their central role in enabling other pointer operations: 
 * [`offset(self, count: isize) -> *const T`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset): Adds a signed offset to a pointer. The offset is specified by the argument `count` expressed in units of `T`; e.g., a count of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
 * [`offset_from(self, origin: *const T) -> isize`](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset_from): Calculates the distance between two pointers. The returned value is in units of T: the distance in bytes divided by `mem::size_of::<T>()`.
 
