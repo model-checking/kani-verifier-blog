@@ -19,7 +19,7 @@ Pointer arithmetic is commonly used in applications that require precise control
 
 #### What has our team has done?
 Our team utilized Kani, a formal verification tool to check the safety of raw pointer arithmetic in Rust. Our achievements are:
--	We implemented and verification function contracts for 16 pointer operations, such as add(), sub(), and offset().
+-	We implemented and verified function contracts for 16 pointer operations, such as `add()`, `sub()`, and `offset()`.
 -	We validated these contracts using Kani proofs across five different pointee types: integers, slices, unit, composite and dynamic traits.
 
 This post details our approach, highlights the implementation process, and discusses the challenges encountered while ensuring the safety of pointer arithmetic in Rust.
