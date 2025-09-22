@@ -255,7 +255,7 @@ mod verification {
             width: kani::any(),
             height: kani::any(),
         };
-        let factor: u8 = kani::any();       //< (*)
+        let factor = kani::any();       //< (*)
         kani::assume(0 != original.width);  //< explicit requirements
         kani::assume(0 != original.height); //<
         kani::assume(1 < factor);           //<
@@ -267,10 +267,8 @@ mod verification {
 ```
 
 In this harness, we use another automated reasoning feature: `assume`, which we use to tell the analysis to constrain the possible values of `width`, `height` and `factor`.
-We've also, unfortunately, had to change `factor` into a symbolic `u8` value due to an [issue](https://github.com/diffblue/cbmc/issues/6607) with Kani's handling of `u64` overflow.
-When this issue is fixed Kani will be able to analyze the full problem.
-Until then, this harness covers `2^136` test cases (rather than `2^192`).
-With these changes, the harness can be read as asking Kani: "can you find a choice of values for `width`, `height` and `factor` where `width` and `height` are any *non-zero* `u64` values and `factor` is any `u8` value *greater than one* such that we can fail the assertion?"
+This harness covers `2^192` test cases.
+With these changes, the harness can be read as asking Kani: "can you find a choice of values for `width`, `height` and `factor` where `width` and `height` are any *non-zero* `u64` values and `factor` is any `u64` value *greater than one* such that we can fail the assertion?"
 Running this example through Kani now returns a "VERIFICATION SUCCESSFUL" result meaning the tool could not find such a choice.
 
 ```bash
