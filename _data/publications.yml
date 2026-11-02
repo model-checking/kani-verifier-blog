@@ -110,17 +110,3 @@ using:
     year: 2023
     url: "https://osec.io/blog/formally-verifying-solana-programs/"
     note: "Industry blog post that discusses Kani."
-
-# TODO(maintainers): candidates I could not confirm use Kani (paywalled or
-# no mention found in the accessible text). Verify before adding:
-#   - Formal Verification of a Rust-Based Buddy Physical Memory Allocator (LNCS 2026, doi 10.1007/978-3-032-30693-7_5)
-#   - Automatically Enforcing Rust Trait Properties (VMCAI 2023, doi 10.1007/978-3-031-50521-8_10)
-#   - hax: Verifying Security-Critical Rust Software Using Multiple Provers (doi 10.1007/978-3-031-86695-1_7)
-#   - Overview of Bounded Model Checking for Stack-Based Virtual Machines (doi 10.1007/978-3-031-92196-4_9)
-#   - Rust for Embedded Systems: Current State and Open Problems (CCS 2024, doi 10.1145/3658644.3690275)
-#   - Broadly Enabling KLEE to Effortlessly Find Unrecoverable Errors in Rust (ICSE-SEIP 2024, doi 10.1145/3639477.3639714)
-#   - Counterexamples in Safe Rust (ASE Workshops 2024, doi 10.1145/3691621.3694943)
-# Checked and excluded (Kani appears only in related work, or not at all): Crux (2410.18280),
-# Corten (2609.04372), 2603.28326, CONVEROS (USENIX ATC 2025), RustAssure (2510.07604),
-# Federated Formal Verification (2606.02019), 2607.12282, 2610.09198; the bootloader paper
-# (doi 10.1145/3764860.3768324) uses Verus, not Kani.
