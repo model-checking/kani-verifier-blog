@@ -1,0 +1,10 @@
+---
+layout: page
+---
+<dl class="project-meta">
+  {%- if page.status %}<dt>Status:</dt><dd>{{ page.status }}</dd>{% endif %}
+  {%- if page.leads %}<dt>Leads:</dt><dd>{{ page.leads }}</dd>{% endif %}
+  {%- if page.milestone %}<dt>GitHub milestone:</dt><dd><a href="{{ page.milestone }}">{{ page.milestone_title | default: "Milestone" }}</a></dd>{% endif %}
+</dl>
+
+{{ content }}
