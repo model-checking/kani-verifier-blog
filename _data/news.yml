@@ -1,0 +1,8 @@
+# Home page "Latest News", newest first.
+# Fields: date (YYYY-MM-DD), text, url
+- date: 2026-11-02
+  text: "The Kani blog has a new look!"
+  url: /2026/11/02/a-new-look-for-the-kani-blog.html
+- date: 2026-10-12
+  text: "The Kani paper, \"Kani: A Model Checker for Rust\", is presented at ASE 2026 (Munich)."
+  url: https://doi.org/10.1145/3832783.3834499

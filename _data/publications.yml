@@ -1,0 +1,112 @@
+# Publications page data. Add entries to the lists below.
+# Fields: title, authors (optional), venue, year, url (optional), video (optional), note (optional).
+
+about:
+  - title: "Kani: A Model Checker for Rust"
+    authors: "Rémi Delmas, Zyad Hassan, Qinheping Hu, Rahul Kumar, Felipe R. Monteiro, Thanh Nguyen, Adrián Palacios, Celina Val, Michael Tautschnig, Justus Adam, Daniel Schwartz-Narbonne, and Carolyn Zech"
+    venue: "Proceedings of the 41st IEEE/ACM International Conference on Automated Software Engineering (ASE '26), Munich, Germany, October 12-16, 2026"
+    year: 2026
+    url: "https://doi.org/10.1145/3832783.3834499"
+
+  - title: "Verifying Dynamic Trait Objects in Rust"
+    authors: "Alexa VanHattum, Daniel Schwartz-Narbonne, Nathan Chong, and Adrian Sampson"
+    venue: "Proceedings of the 44th International Conference on Software Engineering: Software Engineering in Practice (ICSE-SEIP '22), May 2022, pp. 321-330"
+    year: 2022
+    url: "https://dl.acm.org/doi/10.1145/3510457.3513031"
+    video: "https://www.youtube.com/watch?v=Bsf0i9bRdHo"
+
+using:
+  - title: "KaPilot: LLM-Assisted Generation of Kani Specifications for Unsafe Rust Verification"
+    authors: "Minghua Wang, Yuxi Ling, Mingzhi Gao, Yuwei Liu, and Lin Huang"
+    venue: "arXiv:2607.21957"
+    year: 2026
+    url: "https://arxiv.org/abs/2607.21957"
+    note: "LLM agents generate Kani specifications for unsafe Rust functions."
+
+  - title: "HarnessLLM: Rust Verification Harness Generation with Large Language Models"
+    authors: "Minghua Wang, Yuwei Liu, and Lin Huang"
+    venue: "Proceedings of the 48th IEEE/ACM International Conference on Software Engineering (ICSE '26), pp. 742-753"
+    year: 2026
+    url: "https://doi.org/10.1145/3744916.3773122"
+    note: "LLM-generated Rust harnesses that are compiled and checked with Kani."
+
+  - title: "The Unfireable Safety Kernel: Execution-Time AI Alignment for AI Agents and Other Escapable AI Systems"
+    authors: "Seth Dobrin and Łukasz Chmiel"
+    venue: "arXiv:2606.26057"
+    year: 2026
+    url: "https://arxiv.org/abs/2606.26057"
+    note: "Kani proves properties of a production Rust decision function."
+
+  - title: "Emmy: The Search for Distributed Robustness through Algebraic Properties via Fuzz Testing and Bounded Model Checking"
+    authors: "Nathaniel Macasaet"
+    venue: "Technical Report UCB/EECS-2026-132, University of California, Berkeley, May 2026"
+    year: 2026
+    url: "https://www2.eecs.berkeley.edu/Pubs/TechRpts/2026/EECS-2026-132.html"
+    note: "Combines fuzzing with Kani to check algebraic properties."
+
+  - title: "Verifying the Rust Standard Library"
+    authors: "Byron Cook, Remi Delmas, Zyad Hassan, Bart Jacobs, Ranjit Jhala, Rahul Kumar, Felipe R. Monteiro, Thanh Nguyen, Rebecca Rumbul, Michael Tautschnig, Celina Val, and Carolyn Zech"
+    venue: "NASA Formal Methods (NFM 2026), LNCS vol. 16622, pp. 415-435"
+    year: 2026
+    url: "https://arxiv.org/abs/2606.17374"
+
+  - title: "A Mixed Methods Study on the Implications of Unsafe Rust for Interoperation, Encapsulation, and Tooling"
+    authors: "Ian McCormack, Tomás Dougan, Sam Estep, Hanan Hibshi, Jonathan Aldrich, and Joshua Sunshine"
+    venue: "ACM Transactions on Software Engineering and Methodology (TOSEM)"
+    year: 2026
+    url: "https://doi.org/10.1145/3798277"
+    note: "Interviews and a survey of Rust developers, some of whom use Kani."
+
+  - title: "Agentic Model Checking"
+    authors: "Youcheng Sun, Jiawen Liu, Daniel Kroening, and Jason Xue"
+    venue: "arXiv:2605.21434"
+    year: 2026
+    url: "https://arxiv.org/abs/2605.21434"
+    note: "LLM agents with bounded model checking back ends; Kani is the Rust back end."
+
+  - title: "Soteria: Efficient Symbolic Execution as a Functional Library"
+    authors: "Sacha-Élie Ayoun, Opale Sjöstedt, and Azalea Raad"
+    venue: "arXiv:2511.08729"
+    year: 2025
+    url: "https://arxiv.org/abs/2511.08729"
+    note: "Uses Kani as a baseline in its evaluation."
+
+  - title: "Lessons Learned So Far From a Community Effort to Verify the Rust Standard Library (work-in-progress)"
+    authors: "Alex Le Blanc and Patrick Lam"
+    venue: "arXiv:2510.01072"
+    year: 2025
+    url: "https://arxiv.org/abs/2510.01072"
+
+  - title: "VERT: Polyglot Verified Equivalent Rust Transpilation with Large Language Models"
+    authors: "Aidan Z.H. Yang, Yoshiki Takashima, Brandon Paulsen, Josiah Dodds, and Daniel Kroening"
+    venue: "40th IEEE/ACM International Conference on Automated Software Engineering (ASE 2025), pp. 1453-1463"
+    year: 2025
+    url: "https://doi.org/10.1109/ase63991.2025.00123"
+    note: "Checks LLM translations to Rust for equivalence using Bolero with Kani."
+
+  - title: "PolyVer: A Compositional Approach for Polyglot System Modeling and Verification"
+    authors: "Pei-Wei Chen, Shaokai Lin, Adwait Godbole, Ramneet Singh, Elizabeth Polgreen, Edward A. Lee, and Sanjit A. Seshia"
+    venue: "arXiv:2503.03207"
+    year: 2025
+    url: "https://arxiv.org/abs/2503.03207"
+    note: "Kani verifies the Rust components of polyglot systems."
+
+  - title: "Surveying the Rust Verification Landscape"
+    authors: "Alex Le Blanc and Patrick Lam"
+    venue: "arXiv:2410.01981"
+    year: 2024
+    url: "https://arxiv.org/abs/2410.01981"
+
+  - title: "PropProof: Free Model-Checking Harnesses from PBT"
+    authors: "Yoshiki Takashima"
+    venue: "Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering (ESEC/FSE '23), pp. 1903-1913"
+    year: 2023
+    url: "https://doi.org/10.1145/3611643.3613863"
+    note: "Turns Rust property-based tests into Kani harnesses."
+
+  - title: "Solana formal verification: a case study"
+    authors: "OtterSec"
+    venue: "OtterSec blog"
+    year: 2023
+    url: "https://osec.io/blog/formally-verifying-solana-programs/"
+    note: "Industry blog post that discusses Kani."

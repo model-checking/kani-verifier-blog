@@ -1,0 +1,44 @@
+---
+---
+@import "minima";
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.site-nav .page-link[aria-current="page"] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.hero { margin-bottom: 2rem; }
+.hero-title { margin: 0; }
+.hero-logo { display: block; max-width: 320px; width: 100%; height: auto; margin: 0 0 1rem; }
+.hero .tagline { font-size: 1.25em; color: $grey-color-dark; }
+.button {
+  display: inline-block;
+  padding: 0.5em 1.1em;
+  border: 1px solid $brand-color;
+  border-radius: 3px;
+  background: $brand-color;
+  color: $background-color;
+  font-weight: 600;
+  &:hover { background: $background-color; color: $brand-color; text-decoration: none; }
+}
+
+.project-meta {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid $grey-color-light;
+  border-radius: 3px;
+  dt { font-weight: 600; float: left; clear: left; margin-right: 0.5em; }
+  dd { margin: 0 0 0.25rem; }
+}
+.publication-list li { margin-bottom: 0.75rem; }
+.site-footer .wrapper { text-align: center; }
+.footer-github { display: inline-block; color: $grey-color; &:hover { color: $brand-color; } }
