@@ -1,0 +1,14 @@
+# Top-level site navigation, in display order.
+# `url` may be a site-relative path or an absolute external URL.
+- title: Home
+  url: /
+- title: Blog
+  url: /blog/
+- title: Projects
+  url: /projects/
+- title: Research
+  url: /research/
+- title: Contact
+  url: /contact/
+- title: Documentation
+  url: https://model-checking.github.io/kani/

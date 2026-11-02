@@ -18,12 +18,12 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Kani Rust Verifier Blog
+title: Kani
 email:
 description: >- # this means to ignore newlines until "baseurl:"
   The Kani Rust Verifier (Kani) is an open-source automated reasoning
-  tool that proves properties about Rust code. This is our blog for
-  the project.
+  tool that proves properties about Rust code. This is the project
+  website: news, blog, projects, and research.
 baseurl: "kani-verifier-blog" # the subpath of your site, e.g. /blog
 url: "https://model-checking.github.io/" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username:
@@ -33,6 +33,11 @@ github_username:
 theme: minima
 plugins:
   - jekyll-feed
+
+collections:
+  projects:
+    output: true
+    permalink: /projects/:name/
 
 # Hide future dated posts from live blog
 future: false
@@ -47,6 +52,10 @@ markdown: kramdown
 # Excluded items can be processed by explicitly listing the directories or
 # their entries' file path in the `include:` list.
 #
+exclude:
+  - CLAUDE.md
+
+# (defaults below, for reference)
 # exclude:
 #   - .sass-cache/
 #   - .jekyll-cache/
