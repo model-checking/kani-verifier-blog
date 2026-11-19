@@ -2,8 +2,9 @@
 title: "What Can Kani Verify in Your Rust Crate? From the Rust Standard Library to Your Own Project"
 layout: post
 ---
+Authors: [Aryan Arun](https://github.com/acearyanarun), [Srivatsan Samraj](https://github.com/srivatsansamraj), [Yanjun Chen](https://github.com/CYJ904), [Tianshu Huang](https://github.com/Tianshu-Huang), [Jieyou Zhao](https://github.com/wodex1nhaoIeng)
 
-Here is a function that will pass every unit test you are likely to write for it:
+Consider this small Rust function:
 
 ```rust
 pub fn first_char(s: &str) -> &str {
@@ -11,19 +12,21 @@ pub fn first_char(s: &str) -> &str {
 }
 ```
 
-`first_char("hello")` returns `"h"`. `first_char("")` returns `""`. `first_char("é")` crashes your program, because `é` takes two bytes in UTF-8 and `&s[..1]` cuts it in half.
+`first_char("hello")` returns `"h"`, and `first_char("")` returns `""`. Both look fine. But `first_char("é")` panics: `é` takes two bytes in UTF-8, and `&s[..1]` cuts it in half.
 
-You would catch this only if you thought of testing a string that starts with an accented letter. Kani does not need to think of it. Instead of running a few inputs that you pick, it checks every string up to a given size at once, and it finds `"é"` by itself. You do not even need to write the test: one command, `cargo kani autoharness`, tries every function in your crate. (For functions that take strings, such as `first_char`, you add one flag, `--bounded-arguments`, which lets Kani generate strings up to a size limit.)
+A unit test could catch this, but only if someone thought to include a string that starts with a multibyte character. Kani can check string inputs up to a chosen size and find the same problem. With `cargo kani autoharness -Z autoharness`, it attempts to generate proof harnesses for functions in your crate. For functions that take strings, such as `first_char`, the `--bounded-arguments` flag lets it generate strings up to a size limit.
 
-So we asked a bigger question. What happens if we run that one command on the Rust standard library, the code that every Rust program depends on? That is about 41,000 functions, with no test code written by hand.
+We tried this approach on the Rust standard library, which contains roughly 41,000 functions. We wanted to see how far AutoHarness could get without writing a separate proof harness for each function.
 
-Kani generated 26,726 proof harnesses for them, and 15,535 of those verified: for every input Kani could generate, the code never panics, overflows, or triggers any of the kinds of undefined behavior that Kani checks for. (For a generic function, a harness covers one concrete version of it, such as `ptr::read::<i32>`.) The surprises were in the rest. More than 4,500 failures came from `unsafe` functions, and most of them are not bugs at all: they are promises that the standard library makes only in its comments, such as "this pointer must not be null", which no tool can read. Another 14,489 functions were never checked, and for each one Kani says why.
+Kani generated 26,726 proof harnesses, and 15,535 of those verified successfully. For those harnesses, Kani's checks found no panics, overflows, or supported forms of undefined behavior over the inputs the harness could generate. A harness for a generic function covers one concrete instantiation, such as `ptr::read::<i32>`.
 
-This post explains what those results mean for your own code: what Kani can verify automatically, how to tell a real bug from a false alarm, and how to try it on your own crate in five minutes.
+The remaining results took more work to understand. More than 4,500 failures came from `unsafe` functions, and many involved requirements written in documentation rather than as machine-checkable preconditions, such as a pointer needing to be non-null. Another 14,489 functions were skipped, with a reason recorded for each one.
+
+We'll look at what these different results mean, then walk through a small crate you can try yourself.
 
 ## Proofs without writing proofs
 
-[Kani](https://model-checking.github.io/kani/) is a model checker for Rust. A unit test runs a function on a few inputs that you choose. Kani considers *every* input of a given type at once, and reports either that a check holds for all of them or a concrete input that breaks it. The checks include panics, arithmetic overflow, out-of-bounds accesses, and many kinds of undefined behavior in `unsafe` code.
+[Kani](https://model-checking.github.io/kani/) is a model checker for Rust. A unit test runs a function on inputs you choose. Kani analyzes the inputs represented by a proof harness and reports whether its checks hold or whether it found an input that breaks one. Those checks include panics, arithmetic overflow, out-of-bounds accesses, and many kinds of undefined behavior in `unsafe` code.
 
 To verify a function, Kani normally needs a *proof harness*, a small function that creates arbitrary inputs and calls the code under test:
 
@@ -35,23 +38,25 @@ fn check_estimate_size() {
 }
 ```
 
-Most harnesses follow this pattern. AutoHarness writes them for you. It inspects each function in a crate, generates a harness for each function whose arguments it knows how to construct, and verifies them all, without any change to the source code:
+Many harnesses follow this pattern. AutoHarness generates them automatically for functions whose arguments it knows how to construct, then runs verification without changing the source code:
 
 ```
 cargo kani autoharness -Z autoharness
 ```
 
-If a function has a [function contract](https://model-checking.github.io/kani/reference/experimental/contracts.html), AutoHarness verifies the contract instead. At the end of the run, Kani prints one row per function with its result, and lists every function it skipped together with the reason. AutoHarness is still experimental, which is why it requires `-Z autoharness`. The [AutoHarness chapter of the Kani Book](https://model-checking.github.io/kani/reference/experimental/autoharness.html) describes every option.
+If a function has a [function contract](https://model-checking.github.io/kani/reference/experimental/contracts.html), AutoHarness verifies the contract instead. At the end, Kani reports the result for each selected function and lists skipped functions with their reasons. AutoHarness is still experimental, so it requires `-Z autoharness`. The [AutoHarness chapter of the Kani Book](https://model-checking.github.io/kani/reference/experimental/autoharness.html) covers the available options.
 
-Because the setup cost is a single command, AutoHarness changes the first question from "which functions are worth writing a harness for?" to "what does Kani find when it tries all of them?"
+This gives us an initial picture of what Kani can check automatically and where we still need to write harnesses or improve the tooling.
 
 ## Case study: the Rust standard library
 
-The [Verify Rust Std Lib](https://github.com/model-checking/verify-rust-std) project is a community effort to verify the Rust standard library, with challenges, contributed proofs, and CI that runs Kani on every change. It is a demanding test for automatic harness generation: the library is large, it is generic almost everywhere, and much of it is `unsafe`.
+The [Verify Rust Std Lib](https://github.com/model-checking/verify-rust-std) project is a community effort to verify the Rust standard library through contributed proofs, verification challenges, and CI. The standard library is a difficult target for automatic harness generation. It is large, makes extensive use of generics, and contains a significant amount of `unsafe` code.
 
 ### How the results were collected
 
-The project's scripts run AutoHarness on the whole library with `kani autoharness -Z autoharness --std ./library`. The "library" here is everything the toolchain builds: `core`, `alloc`, `std`, and the crates they depend on, such as `compiler_builtins`, `hashbrown` and `libc`. A parser in the repository reads the verification log and records one entry per generated harness, and a [dashboard](https://wodex1nhaoIeng.github.io/autoharness-dashboard/) tracks the totals from run to run. Each harness receives one of four verdicts:
+The project's scripts run AutoHarness on the whole library using `kani autoharness -Z autoharness --std ./library`, along with the unstable features needed for the library's contracts (`scripts/run-kani.sh --run autoharness`). This includes `core`, `alloc`, `std`, and dependencies such as `compiler_builtins`, `hashbrown` and `libc`.
+
+A parser reads the verification log and records a result for each generated harness. The [dashboard](https://wodex1nhaoIeng.github.io/autoharness-dashboard/) tracks the totals across runs. Each harness receives one of four verdicts:
 
 - **verified**: every check succeeded;
 - **failed**: at least one check failed;
@@ -71,19 +76,19 @@ Of about 41,000 functions, AutoHarness generated harnesses for 26,726 and skippe
 | Timed out | 974       | 3.6%  |
 | Error     | 103       | 0.4%  |
 
-Most harnesses are fast: the median one finishes in 0.06 seconds and 90% finish in under 0.6 seconds. In other words, checking twenty-seven thousand functions costs machine time, not engineering time.
+Most of the harnesses that finished did so quickly. The median verification time was 0.06 seconds, and 90% finished in under 0.6 seconds. Those times describe the completed harnesses; they do not tell us why the others failed or stopped.
 
-The verdicts change sharply with the kind of function. The project's analysis tool classifies each function as *safe*, *unsafe*, or a *safe abstraction*, meaning a safe function that contains `unsafe` code internally:
+The results also vary by function type. The project's analysis tool classifies functions as *safe*, *unsafe*, or *safe abstractions*. A safe abstraction is a safe function that uses `unsafe` code internally:
 
-| Function kind    | Harnesses | Verified | Failed | Timed out |
-|------------------|----------:|---------:|-------:|----------:|
-| Safe             | 14,982    | 67.8%    | 28.7%  | 3.3%      |
-| Safe abstraction | 1,328     | 71.2%    | 20.6%  | 4.7%      |
-| Unsafe           | 5,573     | 16.5%    | 81.8%  | 1.6%      |
+| Function kind    | Harnesses | Verified | Failed | Timed out | Error |
+|------------------|----------:|---------:|-------:|----------:|------:|
+| Safe             | 14,982    | 67.8%    | 28.7%  | 3.3%      | 0.2%  |
+| Safe abstraction | 1,328     | 71.2%    | 20.6%  | 4.7%      | 3.4%  |
+| Unsafe           | 5,573     | 16.5%    | 81.8%  | 1.6%      | 0.1%  |
 
-(4,843 harnesses, mostly instantiated generic functions, are not classified.)
+(The tool could not classify the remaining 4,843 harnesses; about half of them are instantiations of generic functions.)
 
-Safe functions, and safe wrappers around `unsafe` code, verify more than two thirds of the time. Unsafe functions fail more than four times out of five. That does not mean that the standard library's `unsafe` code is broken. Take `ptr::read` and two of its neighbors in the same run:
+In this run, more than two thirds of the harnesses for safe functions and safe abstractions verified. More than four out of five harnesses for unsafe functions failed. That does not mean the underlying `unsafe` code is broken. Consider these three functions:
 
 | Function           | Verdict  | Failed checks |
 |--------------------|----------|--------------:|
@@ -91,15 +96,17 @@ Safe functions, and safe wrappers around `unsafe` code, verify more than two thi
 | `ptr::write::<i32>` | Failed   | 2             |
 | `ptr::read_volatile` | Verified | 0             |
 
-The signature of `ptr::read` accepts any `*const T`, so AutoHarness passes it null, dangling, and valid pointers. `ptr::read` dereferences the null and dangling pointers, and Kani reports each case. Those failures are correct: the function really does exhibit undefined behavior for those inputs. Its documentation forbids them, but documentation is not something a tool can check. The [section on failures](#failure-a-question-not-a-verdict) shows how to turn such a requirement into a precondition that Kani verifies.
+The signature of `ptr::read` accepts any `*const T`, so AutoHarness passes it null, out-of-bounds, and valid pointers. `ptr::read` dereferences the null and out-of-bounds pointers, and Kani reports each case. Those failures are correct: the function really does exhibit undefined behavior for those inputs. Its documentation forbids them, but documentation is not something a tool can check.
 
-Other parts of the library show what the automation already covers:
+`ptr::read_volatile` has the same requirement, yet it verified. The difference is that the Verify Rust Std Lib project has already written that requirement down as a precondition, `#[safety::requires(ub_checks::can_dereference(src))]`, so AutoHarness checks it only for valid pointers. The [section on failures](#failure-a-question-not-a-verdict) shows how to do the same for your own functions.
 
-- **Generic code.** 6,526 harnesses verify a concrete instantiation of a generic function, such as `ptr::read::<i32>`. AutoHarness chooses the type itself, and 4,824 of them (74%) verified.
-- **Formatting.** 746 harnesses verify `Debug` or `Display` implementations, which handwritten harnesses rarely cover. 599 of them verified.
+The run also included:
+
+- **Generic code.** 6,526 harnesses check a concrete instantiation of a generic function, such as `ptr::read::<i32>`. AutoHarness chooses the type itself, and 4,824 of them (74%) verified.
+- **Formatting.** 1,130 harnesses check `Debug` or `Display` implementations, which handwritten harnesses rarely cover. 901 of them verified.
 - **Small, total functions.** Functions such as `char::len_utf8` and `time::Duration::from_secs` verify outright. Their result holds for every input.
 
-The standard library also shows where AutoHarness reaches its limits: functions whose argument types it cannot construct, inputs whose size has no natural bound, and functions whose state space is too large to explore within the time limit. The rest of this post explains how to recognize each case and what to do about it, using small examples that you can reproduce.
+There are still functions that AutoHarness cannot handle automatically, including those with unsupported argument types or inputs that require bounds. Other harnesses are too expensive to verify within the time limit. The next section looks at these cases using smaller examples.
 
 ## How to read the results
 
@@ -108,15 +115,17 @@ An AutoHarness run answers two different questions for each function:
 1. Can AutoHarness prepare this function for verification?
 2. If verification runs, can Kani establish the properties being checked?
 
-A skipped function is a "no" to the first question. Success, failure, and timeout are the three answers to the second. Counting generated harnesses answers the first question only, so keep the two apart when you read the results. Each of the four states tells you something different, and each suggests a different next step. The small examples in this section were run with Kani built from `main` at commit [`cfa7932`](https://github.com/model-checking/kani/commit/cfa793237), and their output is shortened to the relevant lines.
+A skipped function never reaches verification. A generated harness does, but that does not mean it passes. It may verify, fail, time out, or end in an error. Keeping those stages separate makes the results much easier to interpret.
+
+For the examples below, we used Kani built from `main` at commit [`cfa7932`](https://github.com/model-checking/kani/commit/cfa793237). We have shortened the output to the relevant lines.
 
 ### Success: what is proved, and for which inputs
 
-A success means that no check failed for any input that the harness generates. It does not mean that the function, or the crate, is correct in every sense. Three details determine what a success covers.
+A success means no check failed for the inputs generated by that harness. It does not mean the function, much less the entire crate, is correct in every sense. To understand the result, look at three things.
 
-**Which properties.** AutoHarness checks what Kani checks by default: panics, including failed `assert!`s and `unwrap()` on `None`, arithmetic overflow, out-of-bounds accesses, and undefined behavior in `unsafe` code. It does not know what the function is meant to compute. A function that returns the wrong answer without panicking still verifies, unless you state the intended behavior as an assertion or a [contract](https://model-checking.github.io/kani/reference/experimental/contracts.html).
+**Which properties.** AutoHarness checks the properties Kani checks by default, including panics from failed `assert!`s or `unwrap()` on `None`, arithmetic overflow, out-of-bounds accesses, and undefined behavior in `unsafe` code. Kani does not know what a function is supposed to return. A function could return the wrong answer and still verify unless its intended behavior is expressed as an assertion or a [contract](https://model-checking.github.io/kani/reference/experimental/contracts.html).
 
-**Which instantiation.** For a generic function, AutoHarness picks one concrete type that satisfies the trait bounds and verifies only that instantiation. For
+**Which instantiation.** For a generic function, AutoHarness chooses one concrete type that satisfies its trait bounds. It verifies that instantiation, not every possible version of the function. Consider:
 
 ```rust
 fn foo<T: Eq>(x: T, y: T) {
@@ -133,17 +142,11 @@ AutoHarness verifies `foo::<i32>`. The summary table reports the instantiated na
 | my_crate | foo::<i32>        | #[kani::proof]            | Failure             |
 ```
 
-**Which inputs.** For most argument types, including integers, `bool`, `char`, `Box`, `Rc`, `Arc`, `Vec`, and slices of numbers, the harness covers every possible value. For some types, it covers only values up to a size bound, or only values that pass a filter. The summary table marks those results `(bounded)` or `(ctor)`, as described below. Raw pointers passed as separate arguments are never generated to alias each other. The [soundness caveats](https://model-checking.github.io/kani/reference/experimental/autoharness.html#soundness-caveats) section of the Kani Book lists every such restriction.
+**Which inputs.** For many supported argument types, including integers, `bool`, `char`, `Box`, `Rc`, `Arc`, `Vec`, and slices of numbers, the harness considers the possible values represented by its input model. Loops over a long `Vec` or slice are still subject to the loop-unwinding bound. Other types are limited to values up to a size bound or values that pass a filter. The summary marks these results `(bounded)` or `(ctor)`.
 
-The `(bounded)` marker deserves an example. Some types, such as `&str`, have no finite set of values, so a harness cannot cover them all. AutoHarness can generate them up to a size bound, but only when you ask for it, because a bug that needs a larger input would go undetected. The following function is meant to return the first character of a string:
+References and pointers passed as separate arguments never alias each other. The [soundness caveats](https://model-checking.github.io/kani/reference/experimental/autoharness.html#soundness-caveats) section of the Kani Book explains these restrictions.
 
-```rust
-pub fn first_char(s: &str) -> &str {
-    if s.is_empty() { "" } else { &s[..1] }
-}
-```
-
-By default, AutoHarness skips it and says what is missing:
+For example, `&str` has no finite set of possible values. AutoHarness can generate strings up to a size bound, but you have to enable that behavior. A bug that needs a longer input could otherwise be missed. By default, AutoHarness skips our earlier `first_char` example and reports the reason:
 
 ```text
 | Crate    | Skipped Function | Reason for Skipping                                  |
@@ -160,7 +163,7 @@ Failed Checks: This is a placeholder message; Kani doesn't support message forma
 | my_crate | first_char        | #[kani::proof] (bounded)  | Failure             |
 ```
 
-The failing check is the panic that `&s[..1]` raises when byte 1 is not a character boundary, which is the case for any string that starts with a multi-byte character such as `"é"`. A unit test written with ASCII input would not reach this case. (Kani does not yet support panic messages formatted at run time, hence the placeholder text.) Slicing at the end of the first character fixes the bug:
+The check fails because `&s[..1]` panics when byte 1 is not a character boundary, as with a string starting with `"é"`. Tests using only ASCII strings would miss this case. Kani prints the placeholder text because it does not yet support panic messages formatted at run time. Slicing at the end of the first character fixes the bug:
 
 ```rust
 pub fn first_char(s: &str) -> &str {
@@ -176,15 +179,16 @@ pub fn first_char(s: &str) -> &str {
 | my_crate | first_char        | #[kani::proof] (bounded)  | Success             |
 ```
 
-This success holds for strings of up to 4 bytes, and the `(bounded)` marker says so. Kani prints the bounds used in each run, and `--string-bound`, `--slice-bound` and `--bounded-arbitrary-bound` raise them, at the cost of longer verification times.
+The success applies to strings up to 4 bytes long, as the `(bounded)` marker indicates. Kani prints the bounds used in each run. You can increase them with `--string-bound`, `--slice-bound` and `--bounded-arbitrary-bound`, though verification may take longer.
 
 ### Failure: a question, not a verdict
 
-Every failure comes with a concrete input that breaks a check. The question is whether your program could ever receive that input. In practice, the answer puts each failure into one of three cases.
+When Kani reports a failed check, the first question is whether the failing input is one the function is supposed to handle. The examples below show three different situations.
 
 **1. A real bug.** `first_char` is one. Here is another, a `Display` implementation that divides by a field that can be zero:
 
 ```rust
+use std::fmt;
 pub struct Ratio {
     pub num: u32,
     pub den: u32,
@@ -197,7 +201,7 @@ impl fmt::Display for Ratio {
 }
 ```
 
-Nobody asked Kani to look at this code, and the crate contains no other function. AutoHarness found the `Display` implementation by itself and reported `attempt to divide by zero`.
+We did not write a harness for `Ratio`, and the type has no methods of its own. AutoHarness still found its `Display` implementation and reported `attempt to divide by zero`:
 
 ```text
 Failed Checks: attempt to divide by zero
@@ -207,7 +211,7 @@ Failed Checks: attempt to divide by zero
 | my_crate | <Ratio as std::fmt::Display>::fmt | #[kani::proof]            | Failure             |
 ```
 
-**2. A rule that only the documentation states.** This is the `ptr::read` case from the standard library: the function is fine, as long as the caller passes a valid pointer. The fix is to write the rule where Kani can read it, as a precondition. For a function like `ptr::read`, it is one line:
+**2. A rule that only the documentation states.** This is what happened with `ptr::read` in the standard library. The function requires a valid pointer, but that requirement has to be expressed as a precondition for Kani to use it. For a similar function, the precondition takes one line:
 
 ```rust
 #[cfg_attr(kani, kani::requires(kani::mem::can_dereference(ptr)))]
@@ -225,11 +229,13 @@ Failed Checks: dereference failure: pointer outside object bounds
  File: "src/lib.rs", line 2, in read_first
 ```
 
-With it, Kani checks the function only for valid pointers, and verification succeeds. As a bonus, the rule is no longer just a comment: any caller that is verified against this contract must prove that it passes a valid pointer. The same idea works for functions that panic on purpose, such as `char::to_digit`, which panics unless its radix is between 2 and 36: a precondition such as `#[kani::requires((2..=36).contains(&radix))]` turns that failure into a success.
+With the precondition, Kani checks the function only for valid pointers, and verification succeeds. The requirement is now part of the contract, so a caller verified against it must also prove that it passes a valid pointer.
 
-Memory predicates such as `kani::mem::can_dereference` require `-Z mem-predicates`. See the [`kani::mem` documentation](https://model-checking.github.io/kani/crates/doc/kani/mem/index.html).
+The same approach works for functions that panic on purpose. For example, `char::to_digit` requires a radix between 2 and 36. A precondition such as `#[kani::requires((2..=36).contains(&radix))]` lets Kani verify the function within that range.
 
-**3. An input that can never happen.** AutoHarness builds a value of your type by picking each field at random, and that can produce values that your code never creates. Here is a month type whose number is always between 1 and 12:
+Contracts require `-Z function-contracts`, and memory predicates such as `kani::mem::can_dereference` also require `-Z mem-predicates`. See the [`kani::mem` documentation](https://model-checking.github.io/kani/crates/doc/kani/mem/index.html).
+
+**3. An input that can never happen.** If a type has no `Arbitrary` implementation, AutoHarness may construct it by assigning values to its fields independently. That can produce values the program would never normally create. Consider a month type where the number should always be between 1 and 12:
 
 ```rust
 pub struct Month {
@@ -248,12 +254,12 @@ impl Month {
 }
 ```
 
-AutoHarness tries `Month { number: 0 }`, and `Month::days` fails with an overflow and an out-of-bounds index. But no one outside this module can create that value, because `Month::new` rejects it. This is a false alarm, and there are two ways to tell Kani about the rule:
+AutoHarness tries `Month { number: 0 }`, and `Month::days` fails with an overflow and an out-of-bounds index. But `Month::new` rejects that value, and code outside the module cannot construct it directly. To express this restriction, we can:
 
 - write the rule as a [`kani::Invariant`](https://model-checking.github.io/kani/crates/doc/kani/trait.Invariant.html), a three-line `is_safe` method that returns `(1..=12).contains(&self.number)`;
 - or write nothing, and run with `--constructor-args`, which makes AutoHarness create every `Month` through `Month::new`.
 
-Either way, `Month::days` verifies. With `--constructor-args`, the result is marked `(ctor)`: it holds for the months that `Month::new` can produce, which is exactly what you want here, but it is a narrower claim, and the marker reminds you of that.
+Both approaches allow `Month::days` to verify. With `--constructor-args`, the result is marked `(ctor)` because the proof covers values produced by `Month::new`. It is a narrower claim than verifying every possible field value.
 
 Without either fix:
 
@@ -289,11 +295,15 @@ With `cargo kani autoharness -Z autoharness --constructor-args`:
 | my_crate | Month::new        | #[kani::proof]            | Success             |
 ```
 
-`--constructor-args` also assumes conditions that a type asserts about its fields in at least two of its methods. Because both mechanisms may rule out values that are in fact valid, they are opt-in, and the results they affect are always marked `(ctor)`.
+`--constructor-args` also assumes conditions that a type asserts about its fields in at least two of its methods. Because both mechanisms may rule out values that are in fact valid, they are opt-in, and the results they affect are marked `(ctor)`.
 
-**Watch out for filters that let nothing through.** Filtering inputs has one trap: if the filter rejects *every* input, the function is never really called, so it cannot fail, and a "success" would mean nothing. AutoHarness catches this. In the type below, a typo makes the constructor reject every value:
+**What if a filter rejects every input?** A filter that rejects everything can make a function unreachable during verification. That would not be a useful proof. AutoHarness checks for this case. Here, a typo in the constructor rejects every value:
 
 ```rust
+pub struct Percent {
+    value: u8, // meant to be in 0..=100
+}
+
 impl Percent {
     pub fn new(value: u8) -> Option<Percent> {
         if value <= 100 && value > 100 { Some(Percent { value }) } else { None }
@@ -305,7 +315,7 @@ impl Percent {
 }
 ```
 
-Under `--constructor-args`, no `Percent` can ever be created, so AutoHarness reports `Percent::complement` as a failure instead of a hollow success:
+With `--constructor-args`, no `Percent` value can be created. AutoHarness reports `Percent::complement` as a failure rather than treating the unreachable call as a successful proof:
 
 ```text
 Vacuous harness: no generated input reaches `my_crate::Percent::complement`
@@ -315,45 +325,44 @@ Vacuous harness: no generated input reaches `my_crate::Percent::complement`
 | my_crate | Percent::complement | #[kani::proof] (ctor)     | Failure             |
 ```
 
-`Percent::new` itself verifies, because it contains no check that can fail. It is the vacuity check on `Percent::complement` that exposes the typo.
+`Percent::new` still verifies because it has no check that can fail. The vacuity check on `Percent::complement` is what reveals the problem.
 
 ### Timeout or error: no answer yet
 
-A timeout means Kani ran out of time, not that it found a problem. In the standard library, 3.6% of harnesses timed out, mostly on functions with big loops or big inputs, such as `ptr::swap_nonoverlapping`. You can give Kani more time (`--harness-timeout`), limit how many times loops are unrolled (`--default-unwind`; if that limit is too low, Kani says so instead of silently stopping early), or write a harness by hand with smaller inputs for the functions you care about most. An error is just as inconclusive: Kani or CBMC stopped before reaching a verdict, for example because it ran out of memory. That happened to 103 harnesses in the standard library run. Rerunning such a harness on its own, or on a machine with more memory, may produce an answer.
+A timeout means Kani did not finish within the available time. It does not mean the function is wrong. AutoHarness uses a default limit of 60 seconds per harness, and a timed-out harness can appear as a `Failure` in the summary. Check the log before treating that result as a bug. Kani also prints a reminder about the timeout and loop-unwinding limits when a harness fails.
+
+In the standard library run, 3.6% of harnesses timed out, including cases such as `ptr::swap_nonoverlapping`. You can increase the time limit with `--harness-timeout` or adjust loop unwinding with `--default-unwind`. If the unwind limit is too low, Kani reports that rather than silently stopping early. For a function you particularly care about, another option is to write a smaller, more focused harness.
+
+An error also leaves the result unresolved. Kani or CBMC may stop before producing a verdict, for example after running out of memory. This happened to 103 harnesses in the standard library run. Rerunning one of those harnesses separately, perhaps with more memory, may help.
 
 ### Skipped: not tried
 
-A skipped function was never checked at all: AutoHarness did not know how to call it, and the skip table tells you why. About 14,500 standard library functions were skipped, and four reasons cover more than 90% of them:
+A skipped function did not reach verification because AutoHarness could not generate a suitable harness for it. About 14,500 standard library functions were skipped. The table below shows the reasons reported for those functions:
 
-| Reason for skipping                        | Share | What you can do |
-|--------------------------------------------|------:|-----------------|
-| Missing `Arbitrary` for an argument type   | 47%   | add `#[derive(kani::Arbitrary)]` to the type |
-| Generic function with no suitable type     | 30%   | write a harness for the types you use |
-| Const generic of a type other than `usize` | 11%   | write a harness by hand |
-| Needs `--bounded-arguments`                | 10%   | rerun with that flag |
+| Reason for skipping            | Functions | Share | What you can do |
+|--------------------------------|----------:|------:|-----------------|
+| Missing `Arbitrary`            | 6,806     | 47.0% | implement `kani::Arbitrary` for the argument type, or for the field that blocks automatic derivation |
+| Generic: no candidate type     | 3,696     | 25.5% | write a harness for the types you use |
+| Non-`usize` const generic      | 1,581     | 10.9% | write a harness by hand |
+| Requires bounded arguments     | 1,379     | 9.5%  | rerun with `--bounded-arguments` |
+| Generic: search limit reached  | 680       | 4.7%  | write a harness for the types you use |
+| No function body               | 178       | 1.2%  | nothing to verify, as for compiler intrinsics |
+| Const block on a const generic | 122       | 0.8%  | write a harness by hand |
+| Compile-time only              | 49        | 0.3%  | nothing to verify at run time |
 
-These shares come from the baseline analysis of 2026-10-27, which covers 14,491 skipped functions. The remaining few percent are functions without a Rust body, such as compiler intrinsics, and a few rarer cases. AutoHarness reports only the first reason it finds, so a function may have more than one. Grouping skips by reason is also how the team decides what to improve next: the recurring reasons are [tracked as issues](https://github.com/model-checking/kani/issues/4879), and several have already been fixed.
+These counts come from the 2026-10-27 listing run (Kani `cd355b0bc`, verify-rust-std [#737](https://github.com/model-checking/verify-rust-std/pull/737), without `--bounded-arguments`). That run reported 14,491 skipped functions, compared with 14,489 in the 2026-11-16 run.
 
-The complete breakdown of the baseline analysis:
+AutoHarness reports the first skip reason it encounters, so a function may have additional limitations. We used this breakdown to identify recurring problems and organize them into [GitHub issues](https://github.com/model-checking/kani/issues/4879). Several have already been fixed.
 
-| Reason for skipping            | Functions | Share |
-|--------------------------------|----------:|------:|
-| Missing `Arbitrary`            | 6,806     | 47.0% |
-| Generic: no candidate type     | 3,696     | 25.5% |
-| Non-`usize` const generic      | 1,581     | 10.9% |
-| Requires bounded arguments     | 1,379     | 9.5%  |
-| Generic: search limit reached  | 680       | 4.7%  |
-| No function body               | 178       | 1.2%  |
-| Const block on a const generic | 122       | 0.8%  |
-| Compile-time only              | 49        | 0.3%  |
-
-A skipped function is not a failed proof. It is a clue about what the verification workflow needs next.
+These functions were not verified, but the skip reasons show where AutoHarness still needs work.
 
 ## Try it on your own crate
 
-This section runs AutoHarness on a small color-parsing crate. Its four functions cover the cases above: a function that verifies, a real bug that only bounded strings reveal, an overflow that a precondition resolves, and a formatting implementation.
+To see how this works on a smaller project, we'll use a color-parsing crate with four functions. The examples include a successful proof, a string-handling bug, an overflow that needs a precondition, and a formatting implementation.
 
-Install Kani, then create the crate. (The output below was produced with Kani 0.68.0 built from `main` in November 2026. AutoHarness is under active development, so an older release may print different results.)
+The output below comes from a November 2026 development build of Kani from `main`, which reports version 0.68.0. The published 0.68.0 release available through `cargo install` dates from September 2026 and does not include some features used here, such as the vacuity check and `--string-bound`. Your results may differ with that release. To reproduce the examples exactly, [build Kani from source](https://model-checking.github.io/kani/build-from-source.html).
+
+Install Kani and create the crate:
 
 ```
 cargo install --locked kani-verifier
@@ -423,7 +432,7 @@ Failed Checks: attempt to subtract with overflow
 | tinycolor | Rgb::mix                        | #[kani::proof]            | Failure             |
 ```
 
-In one run, without writing anything:
+The first run gives us three results without writing any proof harnesses:
 
 - `Rgb::luminance` and the `Display` implementation verify for every possible color.
 - `Rgb::mix` fails with an overflow, because nothing stops a caller from passing a `weight` above 100, and then `100 - w` goes below zero.
@@ -431,7 +440,7 @@ In one run, without writing anything:
 
 ### Step 2: state the precondition
 
-The intended domain of `weight` is `0..=100`. Stating it as a contract turns the failure into a proof for every valid weight. It also documents the rule in a form Kani checks: a caller verified with this contract, for example through `#[kani::stub_verified(Rgb::mix)]`, must prove that it passes a valid weight.
+The intended range for `weight` is `0..=100`. We can express that as a contract so Kani verifies the function for valid weights. The rule also applies to callers verified against the contract, for example through `#[kani::stub_verified(Rgb::mix)]`: they must prove that they pass a valid weight.
 
 ```rust
 #[cfg_attr(kani, kani::requires(weight <= 100))]
@@ -465,7 +474,9 @@ Failed Checks: This is a placeholder message; Kani doesn't support message forma
 | tinycolor | Rgb::from_short_hex | #[kani::proof] (bounded)  | Failure             |
 ```
 
-Strings of up to 4 bytes are enough to hold `#`, followed by three bytes. Among them is `"#aé"`, which has three bytes after the `#` but only two characters. `digits[1..2]` then cuts `é` in half and panics, as `first_char` did. Iterating over characters fixes the bug, and also reuses `char::to_digit` from the standard library:
+The four-byte bound is enough to include `"#aé"`. It has three bytes after the `#`, but only two characters. The slice `digits[1..2]` cuts `é` in half and panics, just as it did in `first_char`.
+
+We can fix this by iterating over characters instead of indexing by byte. The revised code also uses `char::to_digit` from the standard library:
 
 ```rust
 pub fn from_short_hex(s: &str) -> Option<Rgb> {
@@ -488,8 +499,10 @@ Rerun the same command, and every function verifies:
 Complete - 4 successfully verified functions, 0 failures, 4 total.
 ```
 
-In four short runs, without writing a harness, you found an undocumented precondition and a Unicode bug that ASCII test cases would miss. Just as important is what these results do not say: the parser is verified only for strings of up to 4 bytes, and nothing here checks that the colors are *correct*. For that, add assertions or postconditions about what each function should return.
+These runs found a missing precondition and a Unicode bug without a handwritten harness. There are limits to the results, though. The parser was checked only for strings up to 4 bytes, and the proofs do not establish that the colors returned are *correct*. That would require assertions or postconditions describing the expected outputs.
 
 ## Where to go from here
 
-Run `cargo kani autoharness -Z autoharness` on your own crate, and read the results in this order: the skip table, to see what was not attempted and why; the failures, to sort real bugs from missing preconditions and impossible inputs; and the `(bounded)` and `(ctor)` markers, to see what each success covers. The [AutoHarness chapter of the Kani Book](https://model-checking.github.io/kani/reference/experimental/autoharness.html) documents every option, and the [Verify Rust Std Lib](https://github.com/model-checking/verify-rust-std) project welcomes contributions that turn automatic results into verified contracts. If AutoHarness skips a function that you think it should handle, or reports a failure that you cannot explain, please [open an issue](https://github.com/model-checking/kani/issues).
+To try AutoHarness on your own crate, start with `cargo kani autoharness -Z autoharness`. Read the skip table first to see which functions were not attempted. Then examine failed checks to distinguish bugs from missing preconditions or inputs that should not occur. Finally, look for `(bounded)` and `(ctor)` markers so you know what each successful result covers.
+
+The [AutoHarness chapter of the Kani Book](https://model-checking.github.io/kani/reference/experimental/autoharness.html) documents the options. The [Verify Rust Std Lib](https://github.com/model-checking/verify-rust-std) project also welcomes contributions that turn automated results into verified contracts. If AutoHarness skips a function you think it should support, or reports a failure you cannot explain, [open an issue](https://github.com/model-checking/kani/issues).
