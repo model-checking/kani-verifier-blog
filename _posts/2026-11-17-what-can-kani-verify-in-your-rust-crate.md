@@ -56,7 +56,7 @@ The [Verify Rust Std Lib](https://github.com/model-checking/verify-rust-std) pro
 
 The project's scripts run AutoHarness on the whole library using `kani autoharness -Z autoharness --std ./library`, along with the unstable features needed for the library's contracts (`scripts/run-kani.sh --run autoharness`). This includes `core`, `alloc`, `std`, and dependencies such as `compiler_builtins`, `hashbrown` and `libc`.
 
-A parser reads the verification log and records a result for each generated harness. The [dashboard](https://wodex1nhaoIeng.github.io/autoharness-dashboard/) tracks the totals across runs. Each harness receives one of four verdicts:
+A parser reads the verification log and records one of four verdicts for each generated harness:
 
 - **verified**: every check succeeded;
 - **failed**: at least one check failed;
@@ -146,7 +146,15 @@ AutoHarness verifies `foo::<i32>`. The summary table reports the instantiated na
 
 References and pointers passed as separate arguments never alias each other. The [soundness caveats](https://model-checking.github.io/kani/reference/experimental/autoharness.html#soundness-caveats) section of the Kani Book explains these restrictions.
 
-For example, `&str` has no finite set of possible values. AutoHarness can generate strings up to a size bound, but you have to enable that behavior. A bug that needs a longer input could otherwise be missed. By default, AutoHarness skips our earlier `first_char` example and reports the reason:
+For example, `&str` has no finite set of possible values. AutoHarness can generate strings up to a size bound, but you have to enable that behavior. A bug that needs a longer input could otherwise be missed. Consider the `first_char` function from the introduction:
+
+```rust
+pub fn first_char(s: &str) -> &str {
+    if s.is_empty() { "" } else { &s[..1] }
+}
+```
+
+By default, AutoHarness skips it and reports the reason:
 
 ```text
 | Crate    | Skipped Function | Reason for Skipping                                  |
